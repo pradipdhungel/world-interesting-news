@@ -58,6 +58,10 @@ const mobileNav = document.querySelector("#mobile-nav");
 const menuToggle = document.querySelector("#menu-toggle");
 const mobilePanel = document.querySelector("#mobile-panel");
 const themeToggle = document.querySelector("#theme-toggle");
+const aiModal = document.querySelector("#ai-modal");
+const aiContent = document.querySelector("#ai-content");
+const aiTitle = document.querySelector("#ai-title");
+const aiClose = document.querySelector("#ai-close");
 
 const translations = {
   en: {
@@ -273,6 +277,63 @@ function readingTime(article) {
 
 function articleLink(article) {
   return `/article.html?id=${encodeURIComponent(article.id)}`;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function closeAiModal() {
+  if (!aiModal) return;
+  aiModal.hidden = true;
+}
+
+function renderAiInsight(insight) {
+  aiTitle.textContent = insight.headline || "AI insight";
+  aiContent.innerHTML = `
+    <section>
+      <h3>Quick take</h3>
+      <p>${escapeHtml(insight.quickTake || "No AI insight is available for this story yet.")}</p>
+    </section>
+    <section>
+      <h3>Why it matters</h3>
+      <p>${escapeHtml(insight.whyItMatters || "")}</p>
+    </section>
+    <section>
+      <h3>What to watch</h3>
+      <ul>${(insight.whatToWatch || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <section>
+      <h3>Questions to ask</h3>
+      <ul>${(insight.questions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <p class="ai-note">${escapeHtml(insight.sourceNote || "")}</p>
+  `;
+}
+
+async function openAiInsight(article) {
+  if (!aiModal || !aiContent || !aiTitle) return;
+  aiModal.hidden = false;
+  aiTitle.textContent = "AI insight";
+  aiContent.innerHTML = '<div class="ai-loading">Generating insight...</div>';
+
+  try {
+    const response = await fetch("/api/ai-insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article })
+    });
+    const insight = await response.json();
+    if (!response.ok) throw new Error(insight.error || "AI insight failed");
+    renderAiInsight(insight);
+  } catch (error) {
+    aiContent.innerHTML = `<div class="ai-error">AI insight is unavailable right now. ${error.message}</div>`;
+  }
 }
 
 function setTheme(theme) {
@@ -729,6 +790,7 @@ function createArticleCard(article, variant = "") {
   const title = node.querySelector("h2");
   const summary = node.querySelector("p");
   const reading = node.querySelector(".reading-time");
+  const aiButton = node.querySelector(".ai-button");
   const link = node.querySelector("a");
 
   if (variant) card.classList.add(variant);
@@ -747,6 +809,7 @@ function createArticleCard(article, variant = "") {
   title.textContent = article.title;
   summary.textContent = article.summary || "Open the original report for more details and context.";
   reading.textContent = readingTime(article);
+  aiButton.addEventListener("click", () => openAiInsight(article));
   link.href = articleLink(article);
   link.target = "";
   link.rel = "";
@@ -951,6 +1014,10 @@ menuToggle?.addEventListener("click", () => {
 themeToggle?.addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });
+aiClose?.addEventListener("click", closeAiModal);
+aiModal?.addEventListener("click", (event) => {
+  if (event.target === aiModal) closeAiModal();
+});
 document.addEventListener("click", (event) => {
   if (!countryPicker.contains(event.target)) {
     setCountryMenu(false);
@@ -967,6 +1034,7 @@ document.addEventListener("keydown", (event) => {
     setCountryMenu(false);
     closeIconMenus();
     closeMobileMenu();
+    closeAiModal();
   }
 });
 categoryPicker.addEventListener("click", (event) => event.stopPropagation());

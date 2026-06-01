@@ -17,6 +17,9 @@ const readerTime = document.querySelector("#reader-time");
 const copyLink = document.querySelector("#copy-link");
 const shareX = document.querySelector("#share-x");
 const themeToggle = document.querySelector("#theme-toggle");
+const readerAiButton = document.querySelector("#reader-ai-button");
+const readerAiPanel = document.querySelector("#reader-ai-panel");
+const readerAiContent = document.querySelector("#reader-ai-content");
 
 function formatDate(value) {
   const parsed = new Date(value);
@@ -33,6 +36,56 @@ function formatDate(value) {
 function readingTime(article) {
   const words = `${article.title || ""} ${article.summary || ""}`.trim().split(/\s+/).filter(Boolean).length;
   return `${Math.max(2, Math.ceil(words / 85))} min read`;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderAiInsight(insight) {
+  readerAiContent.innerHTML = `
+    <section>
+      <h3>Quick take</h3>
+      <p>${escapeHtml(insight.quickTake)}</p>
+    </section>
+    <section>
+      <h3>Why it matters</h3>
+      <p>${escapeHtml(insight.whyItMatters)}</p>
+    </section>
+    <section>
+      <h3>What to watch</h3>
+      <ul>${(insight.whatToWatch || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <section>
+      <h3>Questions to ask</h3>
+      <ul>${(insight.questions || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <p class="ai-note">${escapeHtml(insight.sourceNote)}</p>
+  `;
+}
+
+async function loadAiInsight() {
+  if (!article || !readerAiPanel || !readerAiContent) return;
+  readerAiPanel.hidden = false;
+  readerAiContent.innerHTML = '<div class="ai-loading">Generating insight...</div>';
+
+  try {
+    const response = await fetch("/api/ai-insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ article })
+    });
+    const insight = await response.json();
+    if (!response.ok) throw new Error(insight.error || "AI insight failed");
+    renderAiInsight(insight);
+  } catch (error) {
+    readerAiContent.innerHTML = `<div class="ai-error">AI insight is unavailable right now. ${escapeHtml(error.message)}</div>`;
+  }
 }
 
 function setTheme(theme) {
@@ -191,6 +244,8 @@ copyLink?.addEventListener("click", async () => {
     copyLink.textContent = "Copy link";
   }, 1800);
 });
+
+readerAiButton?.addEventListener("click", loadAiInsight);
 
 themeToggle?.addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");

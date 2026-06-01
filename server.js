@@ -351,6 +351,31 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
+function readJsonBody(request) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 120000) {
+        reject(new Error("Request body is too large."));
+        request.destroy();
+      }
+    });
+    request.on("end", () => {
+      if (!body) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(body));
+      } catch {
+        reject(new Error("Invalid JSON body."));
+      }
+    });
+    request.on("error", reject);
+  });
+}
+
 function decodeEntities(value) {
   return String(value || "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
@@ -368,6 +393,68 @@ function decodeEntities(value) {
 
 function stripHtml(value) {
   return decodeEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function splitSentences(value) {
+  return String(value || "")
+    .split(/(?<=[.!?।])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+function cleanArticleTitle(value) {
+  return String(value || "")
+    .replace(/\s+-\s+[^-]+$/, "")
+    .replace(/\s+\|\s+.+$/, "")
+    .trim();
+}
+
+function buildAiInsight(article) {
+  const title = cleanArticleTitle(article.title || "This story");
+  const sourceName = article.source?.name || "the original publisher";
+  const category = article.category || "news";
+  const country = article.country || "the selected region";
+  const summarySentences = splitSentences(article.summary);
+  const firstSummary = summarySentences.find((sentence) => sentence.length > 24) || "";
+
+  return {
+    label: "AI insight",
+    headline: title,
+    quickTake: firstSummary
+      ? `${firstSummary} The main thing to watch is how this development changes the next steps for people following ${category} news in ${country}.`
+      : `${title} is a developing ${category} story connected to ${country}. The useful next step is to compare the source report with later updates from trusted publishers.`,
+    whyItMatters: `This matters because ${category} stories can affect decisions, public attention, markets, policy, or everyday life depending on the region and people involved.`,
+    whatToWatch: [
+      "Whether other trusted sources confirm or expand the report.",
+      "Who is directly affected and what changes next.",
+      `New updates from ${sourceName} or official sources.`
+    ],
+    questions: [
+      "What facts are confirmed right now?",
+      "What is still unclear or developing?",
+      "What changed compared with earlier reports?"
+    ],
+    sourceNote: `Generated from available article metadata and source attribution. Read the full story at ${sourceName} for complete reporting.`
+  };
+}
+
+async function handleAiInsight(request, response) {
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Use POST for AI insight." });
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(request);
+    const article = body.article || {};
+    if (!article.title) {
+      sendJson(response, 400, { error: "Article title is required." });
+      return;
+    }
+    sendJson(response, 200, buildAiInsight(article));
+  } catch (error) {
+    sendJson(response, 400, { error: error.message });
+  }
 }
 
 function getTag(block, tag) {
@@ -634,6 +721,11 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/api/news") {
     handleNews(request, response, url);
+    return;
+  }
+
+  if (url.pathname === "/api/ai-insight") {
+    handleAiInsight(request, response);
     return;
   }
 

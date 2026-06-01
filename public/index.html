@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>World Interesting News</title>
-    <link rel="stylesheet" href="/styles.css?v=premium-newsroom-2">
+    <link rel="stylesheet" href="/styles.css?v=ai-insight-1">
   </head>
   <body>
     <div class="page-shell" aria-hidden="true">
@@ -209,12 +209,22 @@
           <p></p>
           <div class="article-footer">
             <span class="reading-time">3 min read</span>
+            <button class="ai-button" type="button">AI insight</button>
           </div>
           <a target="_blank" rel="noopener noreferrer">Read from source</a>
         </div>
       </article>
     </template>
 
-    <script src="/app.js?v=premium-newsroom-2" defer></script>
+    <div class="ai-modal" id="ai-modal" hidden>
+      <div class="ai-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-title">
+        <button class="ai-close" id="ai-close" type="button" aria-label="Close AI insight">×</button>
+        <span class="section-kicker">AI assistant</span>
+        <h2 id="ai-title">AI insight</h2>
+        <div id="ai-content" class="ai-content"></div>
+      </div>
+    </div>
+
+    <script src="/app.js?v=ai-insight-1" defer></script>
   </body>
 </html>

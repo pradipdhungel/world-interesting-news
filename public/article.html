@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Story | World Interesting News</title>
-    <link rel="stylesheet" href="/styles.css?v=premium-newsroom-2">
+    <link rel="stylesheet" href="/styles.css?v=ai-insight-1">
   </head>
   <body>
     <div class="page-shell" aria-hidden="true">
@@ -52,9 +52,14 @@
             <h1 id="reader-title">Loading story...</h1>
             <p class="reader-summary" id="reader-summary"></p>
             <div class="share-row" aria-label="Share this story">
+              <button type="button" id="reader-ai-button">AI insight</button>
               <button type="button" id="copy-link">Copy link</button>
               <a id="share-x" target="_blank" rel="noopener noreferrer">Share</a>
             </div>
+            <section class="ai-inline" id="reader-ai-panel" hidden>
+              <h2>AI insight</h2>
+              <div id="reader-ai-content"></div>
+            </section>
             <section class="reader-section">
               <h2>Key points</h2>
               <ul class="reader-list" id="reader-key-points"></ul>
@@ -103,6 +108,6 @@
       </nav>
     </footer>
 
-    <script src="/article.js?v=premium-newsroom-2" defer></script>
+    <script src="/article.js?v=ai-insight-1" defer></script>
   </body>
 </html>
