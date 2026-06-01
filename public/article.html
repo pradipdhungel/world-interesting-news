@@ -4,9 +4,24 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Story | World Interesting News</title>
-    <link rel="stylesheet" href="/styles.css?v=ai-insight-1">
+    <meta name="description" content="Read an original brief with source attribution, context, key points, related stories, and AI-assisted insight from World Interesting News.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="author" content="World Interesting News Editorial Team">
+    <link rel="canonical" href="/article.html">
+    <link rel="alternate" type="application/rss+xml" title="World Interesting News RSS" href="/rss.xml">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Story | World Interesting News">
+    <meta property="og:description" content="Read an original brief with source attribution, context, key points, related stories, and AI-assisted insight.">
+    <meta property="og:image" content="/logo.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Story | World Interesting News">
+    <meta name="twitter:description" content="Read an original brief with source attribution, context, key points, related stories, and AI-assisted insight.">
+    <meta name="twitter:image" content="/logo.svg">
+    <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css?v=seo-2">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <div class="page-shell" aria-hidden="true">
       <div class="world-grid"></div>
     </div>
@@ -35,7 +50,12 @@
       </div>
     </header>
 
-    <main class="article-page">
+    <main class="article-page" id="main-content">
+      <nav class="breadcrumb" id="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span aria-hidden="true">/</span>
+        <span id="breadcrumb-current">Story</span>
+      </nav>
       <div class="reader-kicker">
         <span>Story brief</span>
         <span>Source-first reporting</span>
@@ -47,6 +67,7 @@
             <div class="reader-meta">
               <span id="reader-source"></span>
               <span id="reader-date"></span>
+              <span id="reader-updated"></span>
               <span id="reader-time">3 min read</span>
             </div>
             <h1 id="reader-title">Loading story...</h1>
@@ -72,10 +93,29 @@
               <h2>Context</h2>
               <p id="reader-context"></p>
             </section>
+            <section class="reader-section author-box" id="author-box">
+              <h2>Author</h2>
+              <p><strong>World Interesting News Editorial Team</strong></p>
+              <p>Our editors create source-first briefs from live news metadata, clearly attribute publishers, and direct readers to original reporting for full context.</p>
+              <a href="/authors/editorial-team.html">View author profile</a>
+            </section>
+            <section class="reader-section tags-box">
+              <h2>Tags</h2>
+              <div class="tag-list" id="tag-list"></div>
+            </section>
+            <section class="reader-section trust-box">
+              <h2>Why you can trust us</h2>
+              <p>We separate our original summary from the publisher's full report, label source attribution clearly, and provide links to our editorial and corrections policies.</p>
+              <p><a href="/editorial-policy.html">Editorial policy</a> · <a href="/corrections-policy.html">Corrections policy</a> · <a href="/contact.html">Contact us</a></p>
+            </section>
             <div class="reader-note">
               This page provides an original brief and context based on available metadata. The complete reporting remains with the original publisher.
             </div>
             <a class="source-button" id="reader-source-link" target="_blank" rel="noopener noreferrer">Read full story at source</a>
+            <nav class="article-nav" aria-label="Previous and next articles">
+              <a id="prev-article" href="/">Previous story</a>
+              <a id="next-article" href="/">Next story</a>
+            </nav>
           </div>
         </article>
 
@@ -104,10 +144,18 @@
       </div>
       <nav aria-label="Footer">
         <a href="/">Home</a>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/editorial-policy.html">Editorial Policy</a>
+        <a href="/corrections-policy.html">Corrections</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/rss.xml">RSS</a>
         <a href="/">Latest</a>
       </nav>
     </footer>
 
-    <script src="/article.js?v=ai-insight-1" defer></script>
+    <script src="/seo.js?v=seo-2" defer></script>
+    <script src="/article.js?v=seo-2" defer></script>
   </body>
 </html>

@@ -4,6 +4,18 @@ const path = require("path");
 
 const PORT = process.env.PORT || process.argv[2] || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
+const SITE_NAME = "World Interesting News";
+const SITE_DESCRIPTION = "Source-first global news discovery with country, category, language, and publisher filters.";
+const SITE_AUTHOR = "World Interesting News Editorial Team";
+const SITE_LOGO_PATH = "/logo.svg";
+let latestArticles = [];
+
+const publicConfig = {
+  googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
+  googleTagManagerId: process.env.GOOGLE_TAG_MANAGER_ID || "",
+  googleSearchConsoleVerification: process.env.GOOGLE_SEARCH_CONSOLE_VERIFICATION || "",
+  microsoftClarityId: process.env.MICROSOFT_CLARITY_ID || ""
+};
 
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 const countryCodes = [
@@ -346,9 +358,52 @@ async function translateArticles(articles, languageKey) {
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    ...securityHeaders()
   });
   response.end(JSON.stringify(payload));
+}
+
+function securityHeaders() {
+  return {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
+  };
+}
+
+function publicBaseUrl(request) {
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const protocol = forwardedProto || (request.socket.encrypted ? "https" : "http");
+  return `${protocol}://${request.headers.host}`;
+}
+
+function xmlEscape(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function htmlEscape(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function slugify(value) {
+  return String(value || "story")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "story";
 }
 
 function readJsonBody(request) {
@@ -681,6 +736,7 @@ async function handleNews(request, response, url) {
       articles
     };
 
+    latestArticles = articles.slice(0, 48);
     cache.set(cacheKey, { createdAt: Date.now(), payload });
     sendJson(response, 200, payload);
   } catch (error) {
@@ -689,6 +745,126 @@ async function handleNews(request, response, url) {
       detail: error.message
     });
   }
+}
+
+function sitemapUrl(loc, lastmod, changefreq, priority) {
+  return `  <url>
+    <loc>${xmlEscape(loc)}</loc>
+    <lastmod>${xmlEscape(lastmod)}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+}
+
+function handleRobots(request, response) {
+  const baseUrl = publicBaseUrl(request);
+  response.writeHead(200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+    ...securityHeaders()
+  });
+  response.end([
+    "User-agent: *",
+    "Allow: /",
+    "Disallow: /api/",
+    "Disallow: /admin",
+    "Disallow: /auth",
+    `Sitemap: ${baseUrl}/sitemap.xml`
+  ].join("\n"));
+}
+
+function handleSitemap(request, response) {
+  const baseUrl = publicBaseUrl(request);
+  const now = new Date().toISOString();
+  const urls = [
+    sitemapUrl(`${baseUrl}/`, now, "hourly", "1.0"),
+    sitemapUrl(`${baseUrl}/about.html`, now, "monthly", "0.7"),
+    sitemapUrl(`${baseUrl}/contact.html`, now, "monthly", "0.7"),
+    sitemapUrl(`${baseUrl}/editorial-policy.html`, now, "monthly", "0.6"),
+    sitemapUrl(`${baseUrl}/corrections-policy.html`, now, "monthly", "0.6"),
+    sitemapUrl(`${baseUrl}/privacy.html`, now, "yearly", "0.4"),
+    sitemapUrl(`${baseUrl}/terms.html`, now, "yearly", "0.4"),
+    sitemapUrl(`${baseUrl}/advertise.html`, now, "monthly", "0.4"),
+    sitemapUrl(`${baseUrl}/authors/editorial-team.html`, now, "monthly", "0.6"),
+    ...Object.keys(topics).map((category) => sitemapUrl(`${baseUrl}/?category=${category}`, now, "hourly", "0.7")),
+    ...latestArticles.map((article) => {
+      const articleUrl = `${baseUrl}/article.html?id=${encodeURIComponent(article.id)}&slug=${slugify(article.title)}`;
+      return sitemapUrl(articleUrl, new Date(article.publishedAt || Date.now()).toISOString(), "daily", "0.8");
+    })
+  ];
+
+  response.writeHead(200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    "Cache-Control": "public, max-age=900",
+    ...securityHeaders()
+  });
+  response.end(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join("\n")}
+</urlset>`);
+}
+
+function handleRss(request, response) {
+  const baseUrl = publicBaseUrl(request);
+  const now = new Date().toUTCString();
+  const items = latestArticles.slice(0, 30).map((article) => {
+    const link = `${baseUrl}/article.html?id=${encodeURIComponent(article.id)}&slug=${slugify(article.title)}`;
+    return `<item>
+      <title>${xmlEscape(article.title)}</title>
+      <description>${xmlEscape(article.summary || SITE_DESCRIPTION)}</description>
+      <link>${xmlEscape(link)}</link>
+      <guid isPermaLink="false">${xmlEscape(article.id)}</guid>
+      <pubDate>${xmlEscape(new Date(article.publishedAt || Date.now()).toUTCString())}</pubDate>
+      <author>${xmlEscape(SITE_AUTHOR)}</author>
+      <category>${xmlEscape(article.category || "news")}</category>
+      <source url="${xmlEscape(article.source?.url || baseUrl)}">${xmlEscape(article.source?.name || SITE_NAME)}</source>
+    </item>`;
+  }).join("\n");
+
+  response.writeHead(200, {
+    "Content-Type": "application/rss+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=900",
+    ...securityHeaders()
+  });
+  response.end(`<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>${xmlEscape(SITE_NAME)}</title>
+    <description>${xmlEscape(SITE_DESCRIPTION)}</description>
+    <link>${xmlEscape(baseUrl)}</link>
+    <language>en-us</language>
+    <lastBuildDate>${xmlEscape(now)}</lastBuildDate>
+    ${items}
+  </channel>
+</rss>`);
+}
+
+function handleNotFound(request, response) {
+  const baseUrl = publicBaseUrl(request);
+  response.writeHead(404, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...securityHeaders()
+  });
+  response.end(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, follow">
+  <title>Page not found | ${htmlEscape(SITE_NAME)}</title>
+  <link rel="canonical" href="${htmlEscape(baseUrl)}/404.html">
+  <link rel="stylesheet" href="/styles.css?v=seo-1">
+</head>
+<body>
+  <main class="static-page">
+    <p class="section-kicker">404</p>
+    <h1>Page not found</h1>
+    <p>The page you requested is not available. Return to the latest global news feed.</p>
+    <a class="source-button" href="/">Back to homepage</a>
+  </main>
+</body>
+</html>`);
 }
 
 function serveStatic(request, response, url) {
@@ -703,14 +879,14 @@ function serveStatic(request, response, url) {
 
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      response.end("Not found");
+      handleNotFound(request, response);
       return;
     }
 
     response.writeHead(200, {
       "Content-Type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
-      "Cache-Control": "public, max-age=60"
+      "Cache-Control": "public, max-age=60",
+      ...securityHeaders()
     });
     response.end(content);
   });
@@ -718,6 +894,21 @@ function serveStatic(request, response, url) {
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
+
+  if (url.pathname === "/robots.txt") {
+    handleRobots(request, response);
+    return;
+  }
+
+  if (url.pathname === "/sitemap.xml") {
+    handleSitemap(request, response);
+    return;
+  }
+
+  if (url.pathname === "/rss.xml") {
+    handleRss(request, response);
+    return;
+  }
 
   if (url.pathname === "/api/news") {
     handleNews(request, response, url);
@@ -739,7 +930,8 @@ const server = http.createServer((request, response) => {
       ],
       defaultCountry: countryCodeFromTimezone(),
       categories: Object.keys(topics),
-      languages: Object.entries(languages).map(([id, language]) => ({ id, name: language.name }))
+      languages: Object.entries(languages).map(([id, language]) => ({ id, name: language.name })),
+      publicConfig
     });
     return;
   }

@@ -276,7 +276,8 @@ function readingTime(article) {
 }
 
 function articleLink(article) {
-  return `/article.html?id=${encodeURIComponent(article.id)}`;
+  const slug = window.NewsSeo ? NewsSeo.slugify(article.title) : article.id;
+  return `/article.html?id=${encodeURIComponent(article.id)}&slug=${encodeURIComponent(slug)}`;
 }
 
 function escapeHtml(value) {
@@ -356,7 +357,17 @@ function selectCategory(categoryId) {
   categorySelect.value = categoryId;
   syncCategoryPicker();
   closeMobileMenu();
+  updateUrlState();
   loadNews();
+}
+
+function updateUrlState() {
+  const params = new URLSearchParams();
+  if (countrySelect.value && countrySelect.value !== "world") params.set("country", countrySelect.value);
+  if (categorySelect.value && categorySelect.value !== "top") params.set("category", categorySelect.value);
+  if (state.query) params.set("q", state.query);
+  const nextUrl = params.toString() ? `/?${params.toString()}` : "/";
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function renderCategoryNavigation() {
@@ -390,6 +401,21 @@ function currentText() {
 
 function applyTranslations() {
   const text = currentText();
+  const canonical = state.query ? "/" : window.location.pathname;
+  if (window.NewsSeo) {
+    NewsSeo.setPageMeta({
+      title: `${text.categories[categorySelect.value] || "World"} News in ${currentCountry()?.name || "World"} | World Interesting News`,
+      description: "Follow trusted global headlines by country, category, language, and source with original short briefs and clear source attribution.",
+      canonical,
+      robots: state.query ? "noindex, follow" : "index, follow, max-image-preview:large"
+    });
+    NewsSeo.setJsonLd("organization", NewsSeo.organizationJsonLd());
+    NewsSeo.setJsonLd("website", NewsSeo.websiteJsonLd());
+    NewsSeo.setJsonLd("breadcrumb", NewsSeo.breadcrumbJsonLd([
+      { name: "Home", url: "/" },
+      { name: text.categories[categorySelect.value] || "Top Stories", url: "/" }
+    ]));
+  }
   document.querySelector(".brand small").textContent = text.subtitle;
   searchInput.placeholder = text.searchPlaceholder;
   searchForm.querySelector("button").textContent = text.search;
@@ -646,7 +672,10 @@ function selectCountry(countryId, shouldLoad = true) {
   countrySelect.value = countryId;
   updateCountryButton();
   setCountryMenu(false);
-  if (shouldLoad) loadNews();
+  if (shouldLoad) {
+    updateUrlState();
+    loadNews();
+  }
 }
 
 function renderCountryOptions() {
@@ -798,6 +827,8 @@ function createArticleCard(article, variant = "") {
   if (article.image) {
     media.style.backgroundImage = `url("${article.image}")`;
     media.classList.add("has-image");
+    media.setAttribute("role", "img");
+    media.setAttribute("aria-label", `${article.title} image`);
     media.innerHTML = `<span class="image-flag">${flagImageMarkup(article, "image-flag-img")}</span>`;
   } else {
     renderGeneratedImage(media, article);
@@ -926,6 +957,15 @@ function updateHeading(payload) {
     .replace("{query}", queryText);
   feedLabel.textContent = `${payload.articles.length} ${text.sourcedStories}`;
   updatedLabel.textContent = `${text.updated} ${new Date(payload.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  if (window.NewsSeo) {
+    const querySuffix = payload.query ? ` matching ${payload.query}` : "";
+    NewsSeo.setPageMeta({
+      title: `${category} News in ${country}${querySuffix} | World Interesting News`,
+      description: `Latest ${category.toLowerCase()} headlines in ${country}${querySuffix}, with source attribution, related stories, AI insight, and links to original publishers.`,
+      canonical: payload.query ? "/" : window.location.pathname,
+      robots: payload.query ? "noindex, follow" : "index, follow, max-image-preview:large"
+    });
+  }
 }
 
 async function loadNews() {
@@ -970,6 +1010,9 @@ async function loadMeta() {
   state.countries = orderCountriesForUser(meta.countries, meta.defaultCountry);
   state.categories = meta.categories;
   state.languages = meta.languages;
+  if (window.NewsSeo) {
+    NewsSeo.injectAnalytics(meta.publicConfig || {});
+  }
 
   countrySelect.innerHTML = "";
   state.countries.forEach((country) => {
@@ -990,6 +1033,20 @@ async function loadMeta() {
   countrySelect.value = "world";
   categorySelect.value = "top";
   languageSelect.value = "en";
+  const params = new URLSearchParams(window.location.search);
+  const requestedCountry = params.get("country");
+  const requestedCategory = params.get("category");
+  const requestedQuery = params.get("q") || "";
+  if (requestedCountry && Array.from(countrySelect.options).some((option) => option.value === requestedCountry)) {
+    countrySelect.value = requestedCountry;
+  }
+  if (requestedCategory && meta.categories.includes(requestedCategory)) {
+    categorySelect.value = requestedCategory;
+  }
+  if (requestedQuery) {
+    state.query = requestedQuery;
+    searchInput.value = requestedQuery;
+  }
   applyTranslations();
   updateCountryButton();
   syncCategoryPicker();
@@ -1001,6 +1058,7 @@ async function loadMeta() {
 
 countrySelect.addEventListener("change", () => {
   updateCountryButton();
+  updateUrlState();
   loadNews();
 });
 countryPicker.addEventListener("click", (event) => event.stopPropagation());
@@ -1058,6 +1116,7 @@ sourceButton.addEventListener("click", () => {
 categorySelect.addEventListener("change", () => {
   syncCategoryPicker();
   renderCategoryNavigation();
+  updateUrlState();
   loadNews();
 });
 languageSelect.addEventListener("change", () => {
@@ -1080,12 +1139,14 @@ resetButton.addEventListener("click", () => {
   sourceSelect.value = "all";
   languageSelect.value = "en";
   applyTranslations();
+  updateUrlState();
   selectCountry("world");
 });
 
 searchForm.addEventListener("submit", (event) => {
   event.preventDefault();
   state.query = searchInput.value.trim();
+  updateUrlState();
   loadNews();
 });
 

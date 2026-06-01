@@ -6,6 +6,7 @@ const article = articles.find((item) => item.id === articleId);
 const media = document.querySelector("#reader-media");
 const source = document.querySelector("#reader-source");
 const date = document.querySelector("#reader-date");
+const updated = document.querySelector("#reader-updated");
 const title = document.querySelector("#reader-title");
 const summary = document.querySelector("#reader-summary");
 const keyPoints = document.querySelector("#reader-key-points");
@@ -20,6 +21,10 @@ const themeToggle = document.querySelector("#theme-toggle");
 const readerAiButton = document.querySelector("#reader-ai-button");
 const readerAiPanel = document.querySelector("#reader-ai-panel");
 const readerAiContent = document.querySelector("#reader-ai-content");
+const breadcrumbCurrent = document.querySelector("#breadcrumb-current");
+const tagList = document.querySelector("#tag-list");
+const prevArticle = document.querySelector("#prev-article");
+const nextArticle = document.querySelector("#next-article");
 
 function formatDate(value) {
   const parsed = new Date(value);
@@ -36,6 +41,16 @@ function formatDate(value) {
 function readingTime(article) {
   const words = `${article.title || ""} ${article.summary || ""}`.trim().split(/\s+/).filter(Boolean).length;
   return `${Math.max(2, Math.ceil(words / 85))} min read`;
+}
+
+function articleLink(item) {
+  const slug = window.NewsSeo ? NewsSeo.slugify(item.title) : item.id;
+  return `/article.html?id=${encodeURIComponent(item.id)}&slug=${encodeURIComponent(slug)}`;
+}
+
+function keywordsForArticle(article) {
+  if (window.NewsSeo) return NewsSeo.keywordsFor(article);
+  return [article.category, article.country, article.source?.name].filter(Boolean);
 }
 
 function escapeHtml(value) {
@@ -113,9 +128,18 @@ function renderMissing() {
   relatedList.innerHTML = "";
   source.textContent = "World Interesting News";
   date.textContent = "";
+  if (updated) updated.textContent = "";
   sourceLink.href = "/";
   sourceLink.textContent = "Back to news";
   if (readerTime) readerTime.textContent = "";
+  if (window.NewsSeo) {
+    NewsSeo.setPageMeta({
+      title: "Story not found | World Interesting News",
+      description: "This story is no longer available in the current browser session.",
+      canonical: "/article.html",
+      robots: "noindex, follow"
+    });
+  }
 }
 
 function cleanTitle(value) {
@@ -194,7 +218,7 @@ function renderRelated(article) {
   related.forEach((item) => {
     const link = document.createElement("a");
     link.className = "related-card";
-    link.href = `/article.html?id=${encodeURIComponent(item.id)}`;
+    link.href = articleLink(item);
     link.innerHTML = `
       <span>${item.source?.name || "Unknown source"}</span>
       <strong>${item.title}</strong>
@@ -203,11 +227,71 @@ function renderRelated(article) {
   });
 }
 
+function renderTags(article) {
+  if (!tagList) return;
+  tagList.innerHTML = "";
+  keywordsForArticle(article).slice(0, 8).forEach((keyword) => {
+    const tag = document.createElement("a");
+    tag.href = `/?q=${encodeURIComponent(keyword)}`;
+    tag.textContent = keyword;
+    tagList.appendChild(tag);
+  });
+}
+
+function renderArticleNavigation(article) {
+  const index = articles.findIndex((item) => item.id === article.id);
+  const previous = articles[index - 1];
+  const next = articles[index + 1];
+
+  if (prevArticle) {
+    prevArticle.href = previous ? articleLink(previous) : "/";
+    prevArticle.textContent = previous ? `Previous: ${previous.title}` : "Back to latest news";
+  }
+  if (nextArticle) {
+    nextArticle.href = next ? articleLink(next) : "/";
+    nextArticle.textContent = next ? `Next: ${next.title}` : "More latest news";
+  }
+}
+
+function updateSeo(article) {
+  if (!window.NewsSeo) return;
+  const canonical = articleLink(article);
+  const description = buildBrief(article);
+  NewsSeo.setPageMeta({
+    title: `${article.title} | World Interesting News`,
+    description,
+    canonical,
+    image: article.image || "/logo.svg",
+    type: "article",
+    author: "World Interesting News Editorial Team"
+  });
+  NewsSeo.setJsonLd("organization", NewsSeo.organizationJsonLd());
+  NewsSeo.setJsonLd("website", NewsSeo.websiteJsonLd());
+  NewsSeo.setJsonLd("breadcrumb", NewsSeo.breadcrumbJsonLd([
+    { name: "Home", url: "/" },
+    { name: article.category || "News", url: `/?category=${encodeURIComponent(article.category || "top")}` },
+    { name: cleanTitle(article.title), url: canonical }
+  ]));
+  NewsSeo.setJsonLd("article", NewsSeo.articleJsonLd(article));
+  NewsSeo.setJsonLd("article-generic", {
+    ...NewsSeo.articleJsonLd(article),
+    "@type": "Article"
+  });
+  NewsSeo.setJsonLd("author", {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: "World Interesting News Editorial Team",
+    url: NewsSeo.absoluteUrl("/authors/editorial-team.html")
+  });
+}
+
 function renderArticle() {
   document.title = `${article.title} | World Interesting News`;
   source.textContent = article.source?.name || "Unknown source";
   date.textContent = formatDate(article.publishedAt);
+  if (updated) updated.textContent = `Updated ${formatDate(article.updatedAt || article.publishedAt)}`;
   if (readerTime) readerTime.textContent = readingTime(article);
+  if (breadcrumbCurrent) breadcrumbCurrent.textContent = article.category || "Story";
   title.textContent = article.title;
   summary.textContent = buildBrief(article);
   keyPoints.innerHTML = "";
@@ -223,10 +307,15 @@ function renderArticle() {
     shareX.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}`;
   }
   renderRelated(article);
+  renderTags(article);
+  renderArticleNavigation(article);
+  updateSeo(article);
 
   if (article.image) {
     media.style.backgroundImage = `url("${article.image}")`;
     media.classList.add("has-reader-image");
+    media.setAttribute("role", "img");
+    media.setAttribute("aria-label", `${article.title} featured image`);
   } else {
     media.classList.add("reader-generated");
     media.innerHTML = `<span>${article.country || "World"}</span>`;
