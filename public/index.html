@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>World Interesting News</title>
+    <link rel="stylesheet" href="/styles.css?v=premium-newsroom-2">
+  </head>
+  <body>
+    <div class="page-shell" aria-hidden="true">
+      <div class="world-grid"></div>
+    </div>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <a class="brand" href="/" aria-label="World Interesting News home">
+          <span class="brand-mark" aria-hidden="true">
+            <span class="brand-globe">
+              <svg viewBox="0 0 64 64" focusable="false">
+                <circle cx="32" cy="32" r="27"></circle>
+                <path d="M10 32h44M32 5c8 7 12 16 12 27s-4 20-12 27M32 5c-8 7-12 16-12 27s4 20 12 27"></path>
+                <path d="M16 17c8 4 24 4 32 0M16 47c8-4 24-4 32 0"></path>
+              </svg>
+            </span>
+            <span class="brand-news">NEWS</span>
+          </span>
+          <span>
+            <strong>World Interesting News</strong>
+            <small>Stories by country, category, and source</small>
+          </span>
+        </a>
+        <nav class="header-nav" id="header-nav" aria-label="Primary categories"></nav>
+        <div class="header-actions">
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode">Dark</button>
+          <a class="subscribe-link" href="#newsletter">Subscribe</a>
+        </div>
+      </div>
+      <div class="mobile-panel" id="mobile-panel" hidden>
+        <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile categories"></nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="breaking-strip" aria-label="Breaking news">
+        <strong>Breaking</strong>
+        <div class="ticker" id="breaking-ticker">Loading top stories from trusted sources...</div>
+        <span id="breaking-time">Live</span>
+      </section>
+
+      <section class="discovery-bar" aria-label="Search and language">
+        <div class="site-language">
+          <label for="language-select">Language</label>
+          <select id="language-select"></select>
+        </div>
+        <form class="search" id="search-form">
+          <input id="search-input" name="q" type="search" placeholder="Search world news" autocomplete="off">
+          <button type="submit" title="Search">Search</button>
+        </form>
+      </section>
+
+      <section class="control-band" aria-label="News filters">
+        <div class="filter-group">
+          <label for="country-button">Country</label>
+          <div class="country-picker" id="country-picker">
+            <button class="country-button" id="country-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="country-button-flag" id="country-button-flag"></span>
+              <span id="country-button-name">World</span>
+            </button>
+            <div class="country-menu" id="country-menu" hidden>
+              <input id="country-search" type="search" placeholder="Search country" autocomplete="off">
+              <div class="country-options" id="country-options" role="listbox" aria-label="Countries"></div>
+            </div>
+          </div>
+          <select id="country-select" hidden></select>
+        </div>
+        <div class="filter-group">
+          <label for="category-button">Category</label>
+          <div class="icon-picker" id="category-picker">
+            <button class="icon-button" id="category-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="option-icon" id="category-button-icon"></span>
+              <span id="category-button-name">Top Stories</span>
+            </button>
+            <div class="icon-menu" id="category-menu" hidden>
+              <div class="icon-options" id="category-options" role="listbox" aria-label="Categories"></div>
+            </div>
+          </div>
+          <select id="category-select" hidden></select>
+        </div>
+        <div class="filter-group">
+          <label for="sort-button">Sort</label>
+          <div class="icon-picker" id="sort-picker">
+            <button class="icon-button" id="sort-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="option-icon" id="sort-button-icon"></span>
+              <span id="sort-button-name">Most interesting</span>
+            </button>
+            <div class="icon-menu" id="sort-menu" hidden>
+              <div class="icon-options" id="sort-options" role="listbox" aria-label="Sort options"></div>
+            </div>
+          </div>
+          <select id="sort-select" hidden>
+            <option value="interesting">Most interesting</option>
+            <option value="newest">Newest</option>
+            <option value="source">Source name</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="source-button">Source</label>
+          <div class="icon-picker" id="source-picker">
+            <button class="icon-button" id="source-button" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="option-icon" id="source-button-icon"></span>
+              <span id="source-button-name">All sources</span>
+            </button>
+            <div class="icon-menu" id="source-menu" hidden>
+              <div class="icon-options" id="source-options" role="listbox" aria-label="Sources"></div>
+            </div>
+          </div>
+          <select id="source-select" hidden>
+            <option value="all">All sources</option>
+          </select>
+        </div>
+        <div class="action-buttons">
+          <button class="refresh-button" id="refresh-button" type="button" title="Refresh news">Refresh</button>
+          <button class="reset-button" id="reset-button" type="button" title="Reset search">Reset</button>
+        </div>
+      </section>
+
+      <section class="status-band">
+        <div>
+          <p class="eyebrow" id="feed-label">Live feed</p>
+          <h1 id="page-title">Interesting news from around the world</h1>
+        </div>
+        <p id="updated-label">Loading latest stories...</p>
+      </section>
+
+      <section id="error-panel" class="error-panel" hidden></section>
+      <section class="homepage-layout" aria-live="polite">
+        <div>
+          <section class="lead-layout" id="lead-layout" aria-label="Featured stories">
+            <div class="featured-story" id="featured-story"></div>
+            <div class="secondary-stories" id="secondary-stories"></div>
+          </section>
+
+          <section class="section-block latest-section">
+            <div class="section-heading">
+              <span>Latest feed</span>
+              <h2>Latest news</h2>
+            </div>
+            <section id="news-grid" class="news-grid"></section>
+          </section>
+
+          <section class="section-block category-sections" id="category-sections" aria-label="Category sections"></section>
+
+          <section class="newsletter" id="newsletter">
+            <div>
+              <span class="section-kicker">Daily briefing</span>
+              <h2>Get the world in your inbox</h2>
+              <p>A clean summary of important stories, grouped by country, category, and trusted source.</p>
+            </div>
+            <form class="newsletter-form">
+              <input type="email" placeholder="Email address" aria-label="Email address">
+              <button type="submit">Sign up</button>
+            </form>
+          </section>
+        </div>
+
+        <aside class="news-sidebar" aria-label="Trending news">
+          <section class="sidebar-card">
+            <div class="section-heading compact">
+              <span>Trending</span>
+              <h2>Most watched</h2>
+            </div>
+            <div id="trending-list" class="trending-list"></div>
+          </section>
+          <section class="ad-block" aria-label="Advertisement placeholder">
+            <span>Ad</span>
+            <strong>Premium placement</strong>
+            <p>Clean reserved space for partners.</p>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>World Interesting News</strong>
+        <p>Source-first global news discovery with country, category, language, and publisher filters.</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="#newsletter">Newsletter</a>
+        <a href="#news-grid">Latest</a>
+      </nav>
+    </footer>
+
+    <template id="article-template">
+      <article class="article-card">
+        <div class="article-media"></div>
+        <div class="article-body">
+          <span class="category-badge"></span>
+          <div class="article-meta">
+            <span class="source"></span>
+            <span class="published"></span>
+          </div>
+          <h2></h2>
+          <p></p>
+          <div class="article-footer">
+            <span class="reading-time">3 min read</span>
+          </div>
+          <a target="_blank" rel="noopener noreferrer">Read from source</a>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js?v=premium-newsroom-2" defer></script>
+  </body>
+</html>

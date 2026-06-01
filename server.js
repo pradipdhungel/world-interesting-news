@@ -1,0 +1,660 @@
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+
+const PORT = process.env.PORT || process.argv[2] || 3000;
+const PUBLIC_DIR = path.join(__dirname, "public");
+
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
+const countryCodes = [
+  "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM",
+  "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ",
+  "BM", "BT", "BO", "BQ", "BA", "BW", "BV", "BR", "IO", "BN", "BG", "BF",
+  "BI", "CV", "KH", "CM", "CA", "KY", "CF", "TD", "CL", "CN", "CX", "CC",
+  "CO", "KM", "CG", "CD", "CK", "CR", "CI", "HR", "CU", "CW", "CY", "CZ",
+  "DK", "DJ", "DM", "DO", "EC", "EG", "SV", "GQ", "ER", "EE", "SZ", "ET",
+  "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF", "GA", "GM", "GE", "DE",
+  "GH", "GI", "GR", "GL", "GD", "GP", "GU", "GT", "GG", "GN", "GW", "GY",
+  "HT", "HM", "VA", "HN", "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE",
+  "IM", "IL", "IT", "JM", "JP", "JE", "JO", "KZ", "KE", "KI", "KP", "KR",
+  "KW", "KG", "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU", "MO",
+  "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT", "MX",
+  "FM", "MD", "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP",
+  "NL", "NC", "NZ", "NI", "NE", "NG", "NU", "NF", "MK", "MP", "NO", "OM",
+  "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT", "PR",
+  "QA", "RE", "RO", "RU", "RW", "BL", "SH", "KN", "LC", "MF", "PM", "VC",
+  "WS", "SM", "ST", "SA", "SN", "RS", "SC", "SL", "SG", "SX", "SK", "SI",
+  "SB", "SO", "ZA", "GS", "SS", "ES", "LK", "SD", "SR", "SJ", "SE", "CH",
+  "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO", "TT", "TN", "TR",
+  "TM", "TC", "TV", "UG", "UA", "AE", "GB", "US", "UM", "UY", "UZ", "VU",
+  "VE", "VN", "VG", "VI", "WF", "EH", "YE", "ZM", "ZW", "XK"
+];
+const countryOverrides = {
+  cd: "Democratic Republic of the Congo",
+  cg: "Republic of the Congo",
+  cz: "Czech Republic",
+  gb: "United Kingdom",
+  ps: "Palestine",
+  tw: "Taiwan",
+  us: "United States"
+};
+
+const countries = Object.fromEntries(
+  countryCodes
+    .map((code) => {
+      const id = code.toLowerCase();
+      const name = countryOverrides[id] || regionNames.of(code);
+      return [id, {
+        name,
+        hl: `en-${code}`,
+        gl: code,
+        ceid: `${code}:en`,
+        flagCode: id,
+        defaultQuery: name
+      }];
+    })
+    .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+);
+
+function countryCodeFromTimezone() {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const exactMatches = {
+    "Asia/Kathmandu": "np",
+    "Asia/Katmandu": "np",
+    "Asia/Kolkata": "in",
+    "Asia/Calcutta": "in",
+    "Europe/London": "gb"
+  };
+
+  if (exactMatches[timezone]) return exactMatches[timezone];
+  if (timezone.startsWith("America/")) return "us";
+  if (timezone.startsWith("Canada/")) return "ca";
+  if (timezone.startsWith("Australia/")) return "au";
+  return "";
+}
+
+countries.world = {
+  name: "World",
+  hl: "en-US",
+  gl: "US",
+  ceid: "US:en",
+  flagCode: "world",
+  defaultQuery: "world news"
+};
+
+const topics = {
+  top: "",
+  world: "WORLD",
+  business: "BUSINESS",
+  technology: "TECHNOLOGY",
+  sports: "SPORTS",
+  entertainment: "ENTERTAINMENT",
+  science: "SCIENCE",
+  health: "HEALTH"
+};
+
+const categorySearchTerms = {
+  top: "",
+  world: "world",
+  business: "business",
+  technology: "technology",
+  sports: "sports",
+  entertainment: "entertainment",
+  science: "science",
+  health: "health"
+};
+
+const localizedCategorySearchTerms = {
+  ne: {
+    top: "",
+    world: "विश्व",
+    business: "अर्थ व्यापार",
+    technology: "प्रविधि",
+    sports: "खेलकुद",
+    entertainment: "मनोरञ्जन",
+    science: "विज्ञान",
+    health: "स्वास्थ्य"
+  },
+  hi: {
+    top: "",
+    world: "दुनिया",
+    business: "व्यापार",
+    technology: "तकनीक",
+    sports: "खेल",
+    entertainment: "मनोरंजन",
+    science: "विज्ञान",
+    health: "स्वास्थ्य"
+  }
+};
+
+const localizedCountrySearchTerms = {
+  ne: {
+    np: "नेपाल समाचार",
+    world: "विश्व समाचार"
+  },
+  hi: {
+    in: "भारत समाचार",
+    np: "नेपाल समाचार",
+    world: "दुनिया समाचार"
+  }
+};
+
+const languages = {
+  en: { name: "English", locale: "en-US", gl: "US", ceid: "en", query: "world news" },
+  hi: { name: "Hindi", locale: "hi-IN", gl: "IN", ceid: "hi", query: "दुनिया समाचार" },
+  ne: { name: "Nepali", locale: "ne-NP", gl: "NP", ceid: "ne", query: "विश्व समाचार" },
+  es: { name: "Spanish", locale: "es-419", gl: "US", ceid: "es-419", query: "noticias mundiales" },
+  fr: { name: "French", locale: "fr-FR", gl: "FR", ceid: "fr", query: "actualites mondiales" },
+  ar: { name: "Arabic", locale: "ar", gl: "AE", ceid: "ar", query: "اخبار العالم" },
+  de: { name: "German", locale: "de-DE", gl: "DE", ceid: "de", query: "weltnachrichten" },
+  ja: { name: "Japanese", locale: "ja-JP", gl: "JP", ceid: "ja", query: "世界 ニュース" },
+  pt: { name: "Portuguese", locale: "pt-BR", gl: "BR", ceid: "pt", query: "noticias do mundo" },
+  zh: { name: "Chinese", locale: "zh-CN", gl: "CN", ceid: "zh-Hans", query: "世界 新闻" }
+};
+
+const mimeTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg"
+};
+
+const cache = new Map();
+const translationCache = new Map();
+const imageCache = new Map();
+
+const directFeeds = {
+  "world:ne": [
+    { name: "BBC Nepali", url: "https://feeds.bbci.co.uk/nepali/rss.xml", sourceUrl: "https://www.bbc.com/nepali" }
+  ],
+  "np:ne": [
+    { name: "OnlineKhabar", url: "https://www.onlinekhabar.com/feed", sourceUrl: "https://www.onlinekhabar.com" },
+    { name: "Ratopati", url: "https://www.ratopati.com/feed", sourceUrl: "https://www.ratopati.com" },
+    { name: "News of Nepal", url: "https://newsofnepal.com/feed", sourceUrl: "https://newsofnepal.com" }
+  ]
+};
+
+function buildSearchPhrase(countryKey, country, categoryKey, query, languageKey = "en") {
+  const categoryTerm = localizedCategorySearchTerms[languageKey]?.[categoryKey] || categorySearchTerms[categoryKey] || "";
+  const countryTerm = localizedCountrySearchTerms[languageKey]?.[countryKey] || country.defaultQuery || country.name;
+  const searchParts = query ? [query, countryTerm] : [countryTerm, categoryTerm];
+  return searchParts.filter(Boolean).join(" ");
+}
+
+function buildSearchUrl(params, phrase) {
+  const nextParams = new URLSearchParams(params);
+  nextParams.set("q", phrase);
+  return `https://news.google.com/rss/search?${nextParams.toString()}`;
+}
+
+function newsParamsFor(country, language) {
+  return new URLSearchParams({
+    hl: language.locale,
+    gl: country.gl,
+    ceid: `${country.gl}:${language.ceid}`
+  });
+}
+
+function buildFeedUrls(countryKey, categoryKey, query, languageKey = "en") {
+  const country = countries[countryKey] || countries.us;
+  const language = languages[languageKey] || languages.en;
+  const params = newsParamsFor(country, language);
+
+  if (countryKey === "world") {
+    const languageParams = new URLSearchParams({
+      hl: language.locale,
+      gl: language.gl,
+      ceid: `${language.gl}:${language.ceid}`
+    });
+    const categoryTerm = localizedCategorySearchTerms[languageKey]?.[categoryKey] || categorySearchTerms[categoryKey] || "";
+    const phrase = query || [language.query, categoryTerm].filter(Boolean).join(" ");
+    return [buildSearchUrl(languageParams, phrase)];
+  }
+
+  if (country.defaultQuery) {
+    const phrase = buildSearchPhrase(countryKey, country, categoryKey, query, languageKey);
+    const fallbackParams = new URLSearchParams({
+      hl: language.locale,
+      gl: language.gl,
+      ceid: `${language.gl}:${language.ceid}`
+    });
+    return [
+      buildSearchUrl(params, phrase),
+      buildSearchUrl(fallbackParams, phrase)
+    ];
+  }
+
+  if (query) {
+    params.set("q", query);
+    return [`https://news.google.com/rss/search?${params.toString()}`];
+  }
+
+  const topic = topics[categoryKey] || topics.top;
+  if (!topic) {
+    return [`https://news.google.com/rss?${params.toString()}`];
+  }
+
+  return [`https://news.google.com/rss/headlines/section/topic/${topic}?${params.toString()}`];
+}
+
+function directFeedList(countryKey, languageKey) {
+  return directFeeds[`${countryKey}:${languageKey}`] || [];
+}
+
+function dedupeArticles(articles) {
+  const seen = new Set();
+  return articles.filter((article) => {
+    const key = article.url || article.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+async function fetchGoogleArticles(feedUrls, countryKey, categoryKey, limit) {
+  let feedResponse;
+  let lastError;
+
+  for (const feedUrl of feedUrls) {
+    try {
+      feedResponse = await fetch(feedUrl, {
+        headers: { "User-Agent": "WorldInterestingNews/1.0" }
+      });
+
+      if (feedResponse.ok) {
+        break;
+      }
+      lastError = new Error(`Feed returned ${feedResponse.status}`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!feedResponse || !feedResponse.ok) {
+    throw lastError || new Error("Feed request failed");
+  }
+
+  const xml = await feedResponse.text();
+  return parseRss(xml, countryKey, categoryKey).slice(0, limit);
+}
+
+function shouldTranslateText(value, languageKey) {
+  if (!value || languageKey === "en") return false;
+  if (["ne", "hi", "ar", "ja", "zh"].includes(languageKey)) {
+    return /[A-Za-z]{3,}/.test(value);
+  }
+  return true;
+}
+
+async function translateText(value, languageKey) {
+  if (!shouldTranslateText(value, languageKey)) return value;
+
+  const cacheKey = `${languageKey}:${value}`;
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey);
+  }
+
+  const params = new URLSearchParams({
+    client: "gtx",
+    sl: "auto",
+    tl: languageKey,
+    dt: "t",
+    q: value
+  });
+
+  try {
+    const response = await fetch(`https://translate.googleapis.com/translate_a/single?${params.toString()}`, {
+      headers: { "User-Agent": "WorldInterestingNews/1.0" }
+    });
+    if (!response.ok) return value;
+
+    const payload = await response.json();
+    const translated = Array.isArray(payload?.[0])
+      ? payload[0].map((part) => part?.[0] || "").join("")
+      : value;
+
+    const clean = translated.trim() || value;
+    translationCache.set(cacheKey, clean);
+    return clean;
+  } catch {
+    return value;
+  }
+}
+
+async function translateArticles(articles, languageKey) {
+  if (languageKey === "en") return articles;
+
+  return Promise.all(articles.map(async (article) => {
+    const [title, summary] = await Promise.all([
+      translateText(article.title, languageKey),
+      translateText(article.summary, languageKey)
+    ]);
+
+    return {
+      ...article,
+      originalTitle: article.title,
+      title,
+      summary
+    };
+  }));
+}
+
+function sendJson(response, statusCode, payload) {
+  response.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store"
+  });
+  response.end(JSON.stringify(payload));
+}
+
+function decodeEntities(value) {
+  return String(value || "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, "/")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)));
+}
+
+function stripHtml(value) {
+  return decodeEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function getTag(block, tag) {
+  const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+  return match ? decodeEntities(match[1]).trim() : "";
+}
+
+function getSource(block) {
+  const match = block.match(/<source\s+url="([^"]*)"[^>]*>([\s\S]*?)<\/source>/i);
+  if (!match) {
+    return { name: "Unknown source", url: "" };
+  }
+  return {
+    name: decodeEntities(match[2]).trim() || "Unknown source",
+    url: decodeEntities(match[1]).trim()
+  };
+}
+
+function getImageFromDescription(description) {
+  const match = description.match(/<img[^>]+src="([^"]+)"/i);
+  return match ? decodeEntities(match[1]) : "";
+}
+
+function getImageFromRssBlock(block, description) {
+  const candidates = [
+    /<media:content[^>]+url="([^"]+)"/i,
+    /<media:thumbnail[^>]+url="([^"]+)"/i,
+    /<enclosure[^>]+url="([^"]+)"[^>]+type="image\/[^"]+"/i,
+    /<image[^>]*>\s*<url>([\s\S]*?)<\/url>\s*<\/image>/i
+  ];
+
+  for (const pattern of candidates) {
+    const match = block.match(pattern);
+    const image = match?.[1] ? decodeEntities(match[1]).trim() : "";
+    if (isUsableNewsImage(image)) return image;
+  }
+
+  const descriptionImage = getImageFromDescription(description);
+  return isUsableNewsImage(descriptionImage) ? descriptionImage : "";
+}
+
+function absoluteUrl(value, baseUrl) {
+  if (!value) return "";
+  try {
+    return new URL(decodeEntities(value), baseUrl).toString();
+  } catch {
+    return "";
+  }
+}
+
+function isUsableNewsImage(value) {
+  if (!value) return false;
+  const lowered = value.toLowerCase();
+  return ![
+    "logo",
+    "favicon",
+    "apple-touch-icon",
+    "sprite",
+    "placeholder",
+    "default-image",
+    "og-fox-news",
+    "blank."
+  ].some((token) => lowered.includes(token));
+}
+
+function getMetaImageFromHtml(html, pageUrl) {
+  const patterns = [
+    /<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["'][^>]*>/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    const image = absoluteUrl(match?.[1], pageUrl);
+    if (isUsableNewsImage(image)) return image;
+  }
+
+  return "";
+}
+
+async function fetchArticleImage(articleUrl) {
+  if (!articleUrl) return "";
+  if (imageCache.has(articleUrl)) return imageCache.get(articleUrl);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(articleUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 WorldInterestingNews/1.0",
+        "Accept": "text/html,application/xhtml+xml"
+      },
+      redirect: "follow",
+      signal: controller.signal
+    });
+    if (!response.ok) return "";
+
+    const html = await response.text();
+    const image = getMetaImageFromHtml(html.slice(0, 240000), response.url || articleUrl);
+    const usableImage = isUsableNewsImage(image) ? image : "";
+    imageCache.set(articleUrl, usableImage);
+    return usableImage;
+  } catch {
+    imageCache.set(articleUrl, "");
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function enrichArticleImages(articles) {
+  const enriched = [...articles];
+  const missing = enriched
+    .map((article, index) => ({ article, index }))
+    .filter(({ article }) => !article.image)
+    .slice(0, 12);
+
+  await Promise.allSettled(missing.map(async ({ article, index }) => {
+    const image = await fetchArticleImage(article.url) || await fetchArticleImage(article.source?.url);
+    if (image) {
+      enriched[index] = { ...article, image, imageSource: "article-meta" };
+    }
+  }));
+
+  return enriched;
+}
+
+function scoreArticle(article) {
+  const text = `${article.title} ${article.summary}`.toLowerCase();
+  const impactWords = ["breaking", "first", "major", "record", "new", "global", "warning", "launch", "wins", "deal"];
+  const score = impactWords.reduce((total, word) => total + (text.includes(word) ? 1 : 0), 0);
+  return score + Math.max(0, 4 - article.ageHours / 12);
+}
+
+function parseRss(xml, countryKey, categoryKey, fallbackSource) {
+  const itemBlocks = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
+  const now = Date.now();
+
+  return itemBlocks.map((block, index) => {
+    const description = getTag(block, "description");
+    const publishedAt = getTag(block, "pubDate");
+    const source = getSource(block);
+    const articleSource = source.name === "Unknown source" && fallbackSource ? fallbackSource : source;
+    const ageHours = publishedAt ? Math.max(0, (now - new Date(publishedAt).getTime()) / 3600000) : 999;
+    const article = {
+      id: `${countryKey}-${categoryKey}-${index}-${Buffer.from(getTag(block, "title")).toString("base64").slice(0, 18)}`,
+      title: stripHtml(getTag(block, "title")),
+      summary: stripHtml(description),
+      url: getTag(block, "link"),
+      source: articleSource,
+      publishedAt,
+      image: getImageFromRssBlock(block, description),
+      country: countries[countryKey]?.name || countries.us.name,
+      countryCode: countries[countryKey]?.flagCode || countries.us.flagCode,
+      category: categoryKey,
+      ageHours
+    };
+    article.interestScore = scoreArticle(article);
+    return article;
+  }).filter((article) => article.title && article.url)
+    .sort((a, b) => b.interestScore - a.interestScore);
+}
+
+async function handleNews(request, response, url) {
+  const country = (url.searchParams.get("country") || "us").toLowerCase();
+  const category = (url.searchParams.get("category") || "top").toLowerCase();
+  const language = (url.searchParams.get("language") || "en").toLowerCase();
+  const query = (url.searchParams.get("q") || "").trim();
+  const limit = Math.min(Number(url.searchParams.get("limit")) || 24, 48);
+  const cacheKey = `${country}:${category}:${language}:${query}:${limit}`;
+  const cached = cache.get(cacheKey);
+
+  if (cached && Date.now() - cached.createdAt < 5 * 60 * 1000) {
+    sendJson(response, 200, { ...cached.payload, cached: true });
+    return;
+  }
+
+  try {
+    const nativeFeeds = !query ? directFeedList(country, language) : [];
+    let articles = [];
+
+    if (nativeFeeds.length) {
+      const feedResults = await Promise.allSettled(nativeFeeds.map(async (feed) => {
+        const feedResponse = await fetch(feed.url, {
+          headers: { "User-Agent": "WorldInterestingNews/1.0" }
+        });
+        if (!feedResponse.ok) {
+          throw new Error(`${feed.name} returned ${feedResponse.status}`);
+        }
+        const xml = await feedResponse.text();
+        return parseRss(xml, country, category, { name: feed.name, url: feed.sourceUrl });
+      }));
+
+      articles = dedupeArticles(feedResults
+        .filter((result) => result.status === "fulfilled")
+        .flatMap((result) => result.value))
+        .sort((a, b) => b.interestScore - a.interestScore)
+        .slice(0, limit);
+    }
+
+    if (!articles.length) {
+      const feedUrls = buildFeedUrls(country, category, query, language);
+      articles = await fetchGoogleArticles(feedUrls, country, category, limit);
+    }
+
+    if (!articles.length && country === "world" && category === "top") {
+      const fallbackUrls = buildFeedUrls(country, "world", query, language);
+      articles = await fetchGoogleArticles(fallbackUrls, country, "world", limit);
+    }
+
+    articles = await enrichArticleImages(articles);
+    articles = await translateArticles(articles, language);
+
+    const payload = {
+      updatedAt: new Date().toISOString(),
+      country: countries[country]?.name || countries.us.name,
+      category,
+      language,
+      query,
+      articles
+    };
+
+    cache.set(cacheKey, { createdAt: Date.now(), payload });
+    sendJson(response, 200, payload);
+  } catch (error) {
+    sendJson(response, 502, {
+      error: "Unable to load the live news feed right now.",
+      detail: error.message
+    });
+  }
+}
+
+function serveStatic(request, response, url) {
+  const requestedPath = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
+  const filePath = path.normalize(path.join(PUBLIC_DIR, requestedPath));
+
+  if (!filePath.startsWith(PUBLIC_DIR)) {
+    response.writeHead(403);
+    response.end("Forbidden");
+    return;
+  }
+
+  fs.readFile(filePath, (error, content) => {
+    if (error) {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+      return;
+    }
+
+    response.writeHead(200, {
+      "Content-Type": mimeTypes[path.extname(filePath)] || "application/octet-stream",
+      "Cache-Control": "public, max-age=60"
+    });
+    response.end(content);
+  });
+}
+
+const server = http.createServer((request, response) => {
+  const url = new URL(request.url, `http://${request.headers.host}`);
+
+  if (url.pathname === "/api/news") {
+    handleNews(request, response, url);
+    return;
+  }
+
+  if (url.pathname === "/api/meta") {
+    sendJson(response, 200, {
+      countries: [
+        { id: "world", name: "World", countryCode: "world" },
+        ...Object.entries(countries)
+          .filter(([id]) => id !== "world")
+          .map(([id, country]) => ({ id, name: country.name, countryCode: country.flagCode }))
+      ],
+      defaultCountry: countryCodeFromTimezone(),
+      categories: Object.keys(topics),
+      languages: Object.entries(languages).map(([id, language]) => ({ id, name: language.name }))
+    });
+    return;
+  }
+
+  serveStatic(request, response, url);
+});
+
+server.listen(PORT, () => {
+  console.log(`World Interesting News is running at http://localhost:${PORT}`);
+});

@@ -1,0 +1,17 @@
+{
+  "name": "world-interesting-news",
+  "version": "1.0.0",
+  "description": "A country and category based world news discovery website with source attribution.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "keywords": [
+    "news",
+    "rss",
+    "website"
+  ],
+  "author": "",
+  "license": "MIT"
+}

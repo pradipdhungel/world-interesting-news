@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Story | World Interesting News</title>
+    <link rel="stylesheet" href="/styles.css?v=premium-newsroom-2">
+  </head>
+  <body>
+    <div class="page-shell" aria-hidden="true">
+      <div class="world-grid"></div>
+    </div>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/" aria-label="World Interesting News home">
+          <span class="brand-mark" aria-hidden="true">
+            <span class="brand-globe">
+              <svg viewBox="0 0 64 64" focusable="false">
+                <circle cx="32" cy="32" r="27"></circle>
+                <path d="M10 32h44M32 5c8 7 12 16 12 27s-4 20-12 27M32 5c-8 7-12 16-12 27s4 20 12 27"></path>
+                <path d="M16 17c8 4 24 4 32 0M16 47c8-4 24-4 32 0"></path>
+              </svg>
+            </span>
+            <span class="brand-news">NEWS</span>
+          </span>
+          <span>
+            <strong>World Interesting News</strong>
+            <small>Story brief with source attribution</small>
+          </span>
+        </a>
+        <div class="header-actions">
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode">Dark</button>
+          <a class="back-link" href="/">Back to news</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="article-page">
+      <div class="reader-kicker">
+        <span>Story brief</span>
+        <span>Source-first reporting</span>
+      </div>
+      <div class="reader-layout">
+        <article class="reader-card" id="reader-card">
+          <div class="reader-media" id="reader-media"></div>
+          <div class="reader-content">
+            <div class="reader-meta">
+              <span id="reader-source"></span>
+              <span id="reader-date"></span>
+              <span id="reader-time">3 min read</span>
+            </div>
+            <h1 id="reader-title">Loading story...</h1>
+            <p class="reader-summary" id="reader-summary"></p>
+            <div class="share-row" aria-label="Share this story">
+              <button type="button" id="copy-link">Copy link</button>
+              <a id="share-x" target="_blank" rel="noopener noreferrer">Share</a>
+            </div>
+            <section class="reader-section">
+              <h2>Key points</h2>
+              <ul class="reader-list" id="reader-key-points"></ul>
+            </section>
+            <section class="reader-section">
+              <h2>Why it matters</h2>
+              <p id="reader-why"></p>
+            </section>
+            <section class="reader-section">
+              <h2>Context</h2>
+              <p id="reader-context"></p>
+            </section>
+            <div class="reader-note">
+              This page provides an original brief and context based on available metadata. The complete reporting remains with the original publisher.
+            </div>
+            <a class="source-button" id="reader-source-link" target="_blank" rel="noopener noreferrer">Read full story at source</a>
+          </div>
+        </article>
+
+        <aside class="reader-sidebar" aria-label="Related news">
+          <section class="sidebar-card">
+            <div class="section-heading compact">
+              <span>Related</span>
+              <h2>More to read</h2>
+            </div>
+            <div class="related-list" id="related-list"></div>
+          </section>
+          <section class="newsletter reader-newsletter">
+            <span class="section-kicker">Briefing</span>
+            <h2>Follow the story</h2>
+            <p>Return to the homepage for updated related coverage by country and source.</p>
+            <a class="source-button" href="/">Latest news</a>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>World Interesting News</strong>
+        <p>Original short briefs with clear source attribution.</p>
+      </div>
+      <nav aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="/">Latest</a>
+      </nav>
+    </footer>
+
+    <script src="/article.js?v=premium-newsroom-2" defer></script>
+  </body>
+</html>
