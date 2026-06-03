@@ -451,8 +451,8 @@ function renderCurrentShort() {
   shortMedia.setAttribute("role", "img");
   shortMedia.setAttribute("aria-label", `${article.title} short video image`);
   if (shortPlay) {
-    shortPlay.querySelector("span").textContent = state.shortPlaying ? "Ⅱ" : "▶";
-    shortPlay.querySelector("small").textContent = state.shortPlaying ? "Pause" : "Play";
+    shortPlay.querySelector("span").textContent = state.shortPlaying ? "Pause" : "Play";
+    shortPlay.querySelector("small").textContent = "Auto";
     shortPlay.setAttribute("aria-label", state.shortPlaying ? "Pause short" : "Play short");
   }
   startShortTimer();
@@ -494,8 +494,8 @@ function previousShort() {
 function toggleShortPlayback() {
   state.shortPlaying = !state.shortPlaying;
   if (shortPlay) {
-    shortPlay.querySelector("span").textContent = state.shortPlaying ? "Ⅱ" : "▶";
-    shortPlay.querySelector("small").textContent = state.shortPlaying ? "Pause" : "Play";
+    shortPlay.querySelector("span").textContent = state.shortPlaying ? "Pause" : "Play";
+    shortPlay.querySelector("small").textContent = "Auto";
     shortPlay.setAttribute("aria-label", state.shortPlaying ? "Pause short" : "Play short");
   }
   if (state.shortPlaying) {

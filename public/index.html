@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Follow trusted global headlines by country, category, language, and source with original short briefs and source attribution.">
     <meta name="twitter:image" content="/logo.svg">
     <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=visits-3">
+    <link rel="stylesheet" href="/styles.css?v=shorts-overlay-1">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -170,6 +170,19 @@
             <div class="short-card" id="short-card">
               <div class="short-progress"><span id="short-progress-bar"></span></div>
               <div class="short-media" id="short-media"></div>
+              <button class="short-close-button" id="short-close" type="button" aria-label="Close shorts">
+                <span aria-hidden="true">x</span>
+              </button>
+              <button class="short-arrow short-arrow-prev" id="short-prev" type="button" aria-label="Previous short">
+                <span aria-hidden="true"></span>
+              </button>
+              <button class="short-arrow short-arrow-next" id="short-next" type="button" aria-label="Next short">
+                <span aria-hidden="true"></span>
+              </button>
+              <button class="short-play-toggle" id="short-play" type="button" aria-label="Pause short">
+                <span aria-hidden="true">Pause</span>
+                <small>Auto</small>
+              </button>
               <div class="short-overlay">
                 <span class="category-badge" id="short-category">Top Stories</span>
                 <h3 id="short-title">Loading news short...</h3>
@@ -181,12 +194,6 @@
                 <a id="short-link" href="/">Read story</a>
               </div>
             </div>
-          </div>
-          <div class="short-controls" aria-label="Short video controls">
-            <button id="short-prev" type="button" aria-label="Previous short"><span aria-hidden="true">↑</span><small>Prev</small></button>
-            <button id="short-play" type="button" aria-label="Pause short"><span aria-hidden="true">Ⅱ</span><small>Pause</small></button>
-            <button id="short-next" type="button" aria-label="Next short"><span aria-hidden="true">↓</span><small>Next</small></button>
-            <button id="short-close" type="button" aria-label="Close shorts"><span aria-hidden="true">×</span><small>Close</small></button>
           </div>
         </div>
       </section>
@@ -292,8 +299,8 @@
       </div>
     </div>
 
-    <script src="/seo.js?v=visits-3" defer></script>
-    <script src="/visit-stats.js?v=visits-3" defer></script>
-    <script src="/app.js?v=visits-3" defer></script>
+    <script src="/seo.js?v=shorts-overlay-1" defer></script>
+    <script src="/visit-stats.js?v=shorts-overlay-1" defer></script>
+    <script src="/app.js?v=shorts-overlay-1" defer></script>
   </body>
 </html>

@@ -789,9 +789,7 @@ h1 {
 
 .shorts-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 420px) 82px;
-  gap: 18px;
-  align-items: center;
+  grid-template-columns: minmax(280px, 430px);
   justify-content: center;
 }
 
@@ -830,6 +828,97 @@ h1 {
   background: #111827;
   color: white;
   isolation: isolate;
+}
+
+.short-close-button,
+.short-arrow,
+.short-play-toggle {
+  position: absolute;
+  z-index: 5;
+  border: 0;
+  cursor: pointer;
+}
+
+.short-close-button {
+  top: 28px;
+  right: 18px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.42);
+  color: white;
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1;
+  backdrop-filter: blur(12px);
+}
+
+.short-arrow {
+  top: 43%;
+  width: 44px;
+  height: 72px;
+  background: transparent;
+  transform: translateY(-50%);
+}
+
+.short-arrow span {
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-top: 3px solid var(--accent);
+  border-right: 3px solid var(--accent);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.42));
+}
+
+.short-arrow-prev {
+  left: -6px;
+}
+
+.short-arrow-prev span {
+  transform: rotate(-135deg);
+}
+
+.short-arrow-next {
+  right: -6px;
+}
+
+.short-arrow-next span {
+  margin-left: auto;
+  transform: rotate(45deg);
+}
+
+.short-play-toggle {
+  top: 52px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.5);
+  color: white;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+}
+
+.short-play-toggle small {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.short-close-button:hover,
+.short-play-toggle:hover {
+  background: rgba(239, 68, 68, 0.82);
+}
+
+.short-arrow:hover span {
+  border-color: #fff;
 }
 
 .short-progress {
@@ -879,6 +968,19 @@ h1 {
   display: grid;
   gap: 10px;
   padding: 24px;
+}
+
+.short-overlay .category-badge {
+  width: 100%;
+  min-height: 22px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #ff5a5f;
+  font-size: 11px;
+  backdrop-filter: blur(12px);
 }
 
 .short-overlay h3 {
