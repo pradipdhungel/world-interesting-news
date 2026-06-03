@@ -1447,10 +1447,10 @@ h1 {
 
 .visitor-stats {
   display: grid;
-  gap: 5px;
+  gap: 8px;
   max-width: 620px;
   margin-top: 16px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background:
@@ -1479,6 +1479,83 @@ h1 {
 .visitor-stats small {
   color: var(--muted);
   font-size: 12px;
+}
+
+.visitor-chart {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin: 6px 0 2px;
+}
+
+.visitor-pie {
+  position: relative;
+  display: grid;
+  width: 104px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#cbd5e1 0deg 360deg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.visitor-pie::after {
+  position: absolute;
+  inset: 18px;
+  content: "";
+  border-radius: inherit;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.visitor-pie span {
+  position: relative;
+  z-index: 1;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.visitor-pie-total {
+  display: block;
+  color: var(--ink) !important;
+  font-size: 18px !important;
+  line-height: 1;
+}
+
+.visitor-legend {
+  display: grid;
+  gap: 7px;
+}
+
+.visitor-legend-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.visitor-legend-item strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.visitor-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.visitor-legend-empty {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .site-footer nav {
@@ -2037,6 +2114,14 @@ h1 {
 
   .site-footer nav {
     justify-content: flex-start;
+  }
+
+  .visitor-chart {
+    grid-template-columns: 1fr;
+  }
+
+  .visitor-pie {
+    width: 118px;
   }
 
   .article-nav {

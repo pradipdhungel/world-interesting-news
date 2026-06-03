@@ -1,5 +1,7 @@
 const visitTotal = document.querySelector("#visit-total");
 const visitCountries = document.querySelector("#visit-countries");
+const visitorStats = document.querySelector("#visitor-stats");
+const chartColors = ["#ef4444", "#0f766e", "#2563eb", "#f59e0b", "#7c3aed"];
 
 const visitTimezoneCountries = {
   "America/New_York": "us",
@@ -46,6 +48,82 @@ function markVisitCounted() {
   } catch {}
 }
 
+function ensureVisitChart() {
+  if (!visitorStats) return null;
+  let chart = visitorStats.querySelector(".visitor-chart");
+  if (chart) return chart;
+
+  chart = document.createElement("div");
+  chart.className = "visitor-chart";
+  chart.setAttribute("aria-label", "Visitor country chart");
+  chart.innerHTML = `
+    <div class="visitor-pie" aria-hidden="true">
+      <span class="visitor-pie-total">0</span>
+      <span>visits</span>
+    </div>
+    <div class="visitor-legend"></div>
+  `;
+  visitorStats.insertBefore(chart, visitorStats.querySelector("small"));
+  return chart;
+}
+
+function renderVisitChart(stats, totalVisits) {
+  const chart = ensureVisitChart();
+  if (!chart) return;
+
+  const pie = chart.querySelector(".visitor-pie");
+  const pieTotal = chart.querySelector(".visitor-pie-total");
+  const legend = chart.querySelector(".visitor-legend");
+  const countries = stats.topCountries || [];
+
+  pieTotal.textContent = totalVisits.toLocaleString();
+  legend.replaceChildren();
+
+  if (!countries.length || totalVisits <= 0) {
+    pie.style.background = "conic-gradient(#cbd5e1 0deg 360deg)";
+    const empty = document.createElement("span");
+    empty.className = "visitor-legend-empty";
+    empty.textContent = "Waiting for more visitor data";
+    legend.append(empty);
+    return;
+  }
+
+  let start = 0;
+  const segments = countries.map((item, index) => {
+    const count = Number(item.count || 0);
+    const end = start + (count / totalVisits) * 360;
+    const color = chartColors[index % chartColors.length];
+    const segment = `${color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+    start = end;
+    return segment;
+  });
+
+  if (start < 360) {
+    segments.push(`#dbe4ea ${start.toFixed(2)}deg 360deg`);
+  }
+  pie.style.background = `conic-gradient(${segments.join(", ")})`;
+
+  countries.forEach((item, index) => {
+    const count = Number(item.count || 0);
+    const percent = totalVisits > 0 ? Math.round((count / totalVisits) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "visitor-legend-item";
+
+    const swatch = document.createElement("span");
+    swatch.className = "visitor-swatch";
+    swatch.style.backgroundColor = chartColors[index % chartColors.length];
+
+    const label = document.createElement("span");
+    label.textContent = item.name || "World";
+
+    const value = document.createElement("strong");
+    value.textContent = `${percent}%`;
+
+    row.append(swatch, label, value);
+    legend.append(row);
+  });
+}
+
 function renderVisitStats(stats) {
   if (!visitTotal || !visitCountries || !stats) return;
   const totalVisits = Number(stats.totalVisits || 0);
@@ -53,13 +131,15 @@ function renderVisitStats(stats) {
 
   if (!stats.topCountries?.length) {
     visitCountries.textContent = "Country insights will appear as people visit the site.";
+    renderVisitChart(stats, totalVisits);
     return;
   }
 
   const countriesText = stats.topCountries
     .map((item) => `${item.name || "World"} ${Number(item.count || 0).toLocaleString()}`)
-    .join(" · ");
+    .join(" | ");
   visitCountries.textContent = `Top countries: ${countriesText}`;
+  renderVisitChart(stats, totalVisits);
 }
 
 async function updateVisitStats() {
