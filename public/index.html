@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Follow trusted global headlines by country, category, language, and source with original short briefs and source attribution.">
     <meta name="twitter:image" content="/logo.svg">
     <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=seo-2">
+    <link rel="stylesheet" href="/styles.css?v=shorts-1">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -51,12 +51,14 @@
         </a>
         <nav class="header-nav" id="header-nav" aria-label="Primary categories"></nav>
         <div class="header-actions">
+          <button class="shorts-nav-button" id="shorts-nav-button" type="button">Shorts</button>
           <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark mode">Dark</button>
           <a class="subscribe-link" href="#newsletter">Subscribe</a>
         </div>
       </div>
       <div class="mobile-panel" id="mobile-panel" hidden>
         <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile categories"></nav>
+        <button class="mobile-shorts-button" id="mobile-shorts-button" type="button">Watch Shorts</button>
       </div>
     </header>
 
@@ -154,6 +156,38 @@
       </section>
 
       <section id="error-panel" class="error-panel" hidden></section>
+
+      <section class="shorts-section" id="shorts-section" hidden aria-label="News shorts">
+        <div class="section-heading">
+          <span>Short video</span>
+          <h2>News Shorts</h2>
+        </div>
+        <div class="shorts-layout">
+          <div class="shorts-phone" id="shorts-phone">
+            <div class="short-card" id="short-card">
+              <div class="short-progress"><span id="short-progress-bar"></span></div>
+              <div class="short-media" id="short-media"></div>
+              <div class="short-overlay">
+                <span class="category-badge" id="short-category">Top Stories</span>
+                <h3 id="short-title">Loading news short...</h3>
+                <p id="short-summary"></p>
+                <div class="short-meta">
+                  <span id="short-source"></span>
+                  <span id="short-time"></span>
+                </div>
+                <a id="short-link" href="/">Read story</a>
+              </div>
+            </div>
+          </div>
+          <div class="short-controls" aria-label="Short video controls">
+            <button id="short-prev" type="button">Previous</button>
+            <button id="short-play" type="button">Pause</button>
+            <button id="short-next" type="button">Next</button>
+            <button id="short-close" type="button">Close</button>
+          </div>
+        </div>
+      </section>
+
       <section class="homepage-layout" aria-live="polite">
         <div>
           <section class="lead-layout" id="lead-layout" aria-label="Featured stories">
@@ -249,7 +283,7 @@
       </div>
     </div>
 
-    <script src="/seo.js?v=seo-2" defer></script>
-    <script src="/app.js?v=seo-2" defer></script>
+    <script src="/seo.js?v=shorts-1" defer></script>
+    <script src="/app.js?v=shorts-1" defer></script>
   </body>
 </html>

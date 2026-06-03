@@ -4,6 +4,11 @@ const state = {
   categories: [],
   languages: [],
   sourceLogos: {},
+  shorts: [],
+  shortIndex: 0,
+  shortPlaying: true,
+  shortTimer: null,
+  shortStartedAt: 0,
   query: ""
 };
 
@@ -58,6 +63,21 @@ const mobileNav = document.querySelector("#mobile-nav");
 const menuToggle = document.querySelector("#menu-toggle");
 const mobilePanel = document.querySelector("#mobile-panel");
 const themeToggle = document.querySelector("#theme-toggle");
+const shortsNavButton = document.querySelector("#shorts-nav-button");
+const mobileShortsButton = document.querySelector("#mobile-shorts-button");
+const shortsSection = document.querySelector("#shorts-section");
+const shortMedia = document.querySelector("#short-media");
+const shortCategory = document.querySelector("#short-category");
+const shortTitle = document.querySelector("#short-title");
+const shortSummary = document.querySelector("#short-summary");
+const shortSource = document.querySelector("#short-source");
+const shortTime = document.querySelector("#short-time");
+const shortLink = document.querySelector("#short-link");
+const shortProgressBar = document.querySelector("#short-progress-bar");
+const shortPrev = document.querySelector("#short-prev");
+const shortPlay = document.querySelector("#short-play");
+const shortNext = document.querySelector("#short-next");
+const shortClose = document.querySelector("#short-close");
 const aiModal = document.querySelector("#ai-modal");
 const aiContent = document.querySelector("#ai-content");
 const aiTitle = document.querySelector("#ai-title");
@@ -393,6 +413,84 @@ function closeMobileMenu() {
   if (!mobilePanel || !menuToggle) return;
   mobilePanel.hidden = true;
   menuToggle.setAttribute("aria-expanded", "false");
+}
+
+function stopShortTimer() {
+  if (state.shortTimer) {
+    clearInterval(state.shortTimer);
+    state.shortTimer = null;
+  }
+}
+
+function startShortTimer() {
+  stopShortTimer();
+  if (!state.shortPlaying || !state.shorts.length) return;
+  state.shortStartedAt = Date.now();
+  if (shortProgressBar) shortProgressBar.style.width = "0%";
+  state.shortTimer = setInterval(() => {
+    const progress = Math.min(1, (Date.now() - state.shortStartedAt) / 7000);
+    if (shortProgressBar) shortProgressBar.style.width = `${progress * 100}%`;
+    if (progress >= 1) {
+      nextShort();
+    }
+  }, 80);
+}
+
+function renderCurrentShort() {
+  const article = state.shorts[state.shortIndex];
+  if (!article || !shortsSection) return;
+
+  shortCategory.textContent = normalizeCategory(article.category);
+  shortTitle.textContent = article.title;
+  shortSummary.textContent = article.summary || "Open the full story for details and source context.";
+  shortSource.textContent = article.source?.name || "Unknown source";
+  shortTime.textContent = formatDate(article.publishedAt);
+  shortLink.href = articleLink(article);
+  shortMedia.innerHTML = "";
+  shortMedia.style.backgroundImage = article.image ? `url("${article.image}")` : generatedImageBackground(article);
+  shortMedia.setAttribute("role", "img");
+  shortMedia.setAttribute("aria-label", `${article.title} short video image`);
+  if (shortPlay) shortPlay.textContent = state.shortPlaying ? "Pause" : "Play";
+  startShortTimer();
+}
+
+function openShorts() {
+  if (!shortsSection) return;
+  if (!state.shorts.length) {
+    state.shorts = sortArticles(sourceFilteredArticles()).slice(0, 12);
+  }
+  shortsSection.hidden = false;
+  closeMobileMenu();
+  renderCurrentShort();
+  shortsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeShorts() {
+  if (!shortsSection) return;
+  shortsSection.hidden = true;
+  stopShortTimer();
+}
+
+function nextShort() {
+  if (!state.shorts.length) return;
+  state.shortIndex = (state.shortIndex + 1) % state.shorts.length;
+  renderCurrentShort();
+}
+
+function previousShort() {
+  if (!state.shorts.length) return;
+  state.shortIndex = (state.shortIndex - 1 + state.shorts.length) % state.shorts.length;
+  renderCurrentShort();
+}
+
+function toggleShortPlayback() {
+  state.shortPlaying = !state.shortPlaying;
+  if (shortPlay) shortPlay.textContent = state.shortPlaying ? "Pause" : "Play";
+  if (state.shortPlaying) {
+    startShortTimer();
+  } else {
+    stopShortTimer();
+  }
 }
 
 function currentText() {
@@ -939,6 +1037,9 @@ function renderArticles() {
   renderLeadStories(articles);
   renderTrending(articles);
   renderCategorySections(articles);
+  state.shorts = articles.slice(0, 12);
+  if (state.shortIndex >= state.shorts.length) state.shortIndex = 0;
+  if (shortsSection && !shortsSection.hidden) renderCurrentShort();
 
   articles.slice(4).forEach((article) => {
     grid.appendChild(createArticleCard(article));
@@ -1072,6 +1173,12 @@ menuToggle?.addEventListener("click", () => {
 themeToggle?.addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 });
+shortsNavButton?.addEventListener("click", openShorts);
+mobileShortsButton?.addEventListener("click", openShorts);
+shortPrev?.addEventListener("click", previousShort);
+shortNext?.addEventListener("click", nextShort);
+shortPlay?.addEventListener("click", toggleShortPlayback);
+shortClose?.addEventListener("click", closeShorts);
 aiClose?.addEventListener("click", closeAiModal);
 aiModal?.addEventListener("click", (event) => {
   if (event.target === aiModal) closeAiModal();
@@ -1093,6 +1200,7 @@ document.addEventListener("keydown", (event) => {
     closeIconMenus();
     closeMobileMenu();
     closeAiModal();
+    closeShorts();
   }
 });
 categoryPicker.addEventListener("click", (event) => event.stopPropagation());

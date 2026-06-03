@@ -287,6 +287,7 @@ select:focus-visible {
 }
 
 .theme-toggle,
+.shorts-nav-button,
 .subscribe-link,
 .back-link {
   display: inline-flex;
@@ -308,6 +309,23 @@ select:focus-visible {
   border-color: var(--accent);
   background: var(--accent);
   color: white;
+}
+
+.shorts-nav-button,
+.mobile-shorts-button {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+.mobile-shorts-button {
+  display: none;
+  width: min(var(--content), calc(100% - 32px));
+  min-height: 42px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  font-weight: 900;
 }
 
 .menu-toggle {
@@ -718,6 +736,165 @@ h1 {
   gap: 24px;
   align-items: start;
   margin-top: 22px;
+}
+
+.shorts-section {
+  margin-top: 24px;
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 20% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 32%),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.shorts-section[hidden] {
+  display: none;
+}
+
+.shorts-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 390px) minmax(180px, 1fr);
+  gap: 22px;
+  align-items: center;
+}
+
+.shorts-phone {
+  width: min(100%, 390px);
+  margin: 0 auto;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 34px;
+  background: #050914;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
+}
+
+.short-card {
+  position: relative;
+  min-height: 620px;
+  overflow: hidden;
+  border-radius: 26px;
+  background: #111827;
+  color: white;
+  isolation: isolate;
+}
+
+.short-progress {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  right: 16px;
+  z-index: 4;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.short-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: white;
+}
+
+.short-media {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.02);
+  animation: shortDrift 7s ease-in-out infinite alternate;
+}
+
+.short-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.26) 36%, rgba(0, 0, 0, 0.84)),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 44%);
+}
+
+.short-overlay {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+}
+
+.short-overlay h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1.02;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.42);
+}
+
+.short-overlay p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.short-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.short-overlay a {
+  justify-self: start;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: white;
+  color: #0f172a;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.short-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.short-controls button {
+  min-height: 46px;
+  border-color: var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.short-controls button:nth-child(2) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+@keyframes shortDrift {
+  from {
+    transform: scale(1.02) translateY(0);
+  }
+
+  to {
+    transform: scale(1.08) translateY(-10px);
+  }
 }
 
 .lead-layout {
@@ -1635,6 +1812,10 @@ h1 {
     display: block;
   }
 
+  .mobile-shorts-button {
+    display: block;
+  }
+
   .control-band {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1650,7 +1831,8 @@ h1 {
 
 @media (max-width: 980px) {
   .homepage-layout,
-  .reader-layout {
+  .reader-layout,
+  .shorts-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1746,6 +1928,10 @@ h1 {
     padding: 0 10px;
   }
 
+  .shorts-nav-button {
+    display: none;
+  }
+
   .breaking-strip {
     grid-template-columns: 1fr;
   }
@@ -1768,6 +1954,10 @@ h1 {
 
   .secondary-card .article-media {
     min-height: 170px;
+  }
+
+  .short-card {
+    min-height: 560px;
   }
 
   .reader-content {
