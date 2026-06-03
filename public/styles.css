@@ -1445,6 +1445,42 @@ h1 {
   margin: 6px 0 0;
 }
 
+.visitor-stats {
+  display: grid;
+  gap: 5px;
+  max-width: 620px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 64%),
+    var(--soft);
+}
+
+.visitor-kicker {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.visitor-stats strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.visitor-stats p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.visitor-stats small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .site-footer nav {
   display: flex;
   flex-wrap: wrap;

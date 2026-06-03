@@ -8,7 +8,9 @@ const SITE_NAME = "World Interesting News";
 const SITE_DESCRIPTION = "Source-first global news discovery with country, category, language, and publisher filters.";
 const SITE_AUTHOR = "World Interesting News Editorial Team";
 const SITE_LOGO_PATH = "/logo.svg";
+const STATS_FILE = path.join(__dirname, "visit-stats.json");
 let latestArticles = [];
+let visitStats = loadVisitStats();
 
 const publicConfig = {
   googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
@@ -16,6 +18,24 @@ const publicConfig = {
   googleSearchConsoleVerification: process.env.GOOGLE_SEARCH_CONSOLE_VERIFICATION || "",
   microsoftClarityId: process.env.MICROSOFT_CLARITY_ID || ""
 };
+
+function loadVisitStats() {
+  try {
+    const raw = fs.readFileSync(STATS_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    return {
+      totalVisits: Number(parsed.totalVisits) || 0,
+      countries: parsed.countries && typeof parsed.countries === "object" ? parsed.countries : {},
+      updatedAt: parsed.updatedAt || new Date().toISOString()
+    };
+  } catch {
+    return { totalVisits: 0, countries: {}, updatedAt: new Date().toISOString() };
+  }
+}
+
+function saveVisitStats() {
+  fs.writeFile(STATS_FILE, JSON.stringify(visitStats, null, 2), () => {});
+}
 
 const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 const countryCodes = [
@@ -404,6 +424,54 @@ function slugify(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80) || "story";
+}
+
+function normalizeCountryCode(value) {
+  const code = String(value || "").trim().toLowerCase();
+  if (/^[a-z]{2}$/.test(code) && countries[code]) return code;
+  return "world";
+}
+
+function publicVisitStats() {
+  const topCountries = Object.entries(visitStats.countries)
+    .map(([code, count]) => ({
+      code,
+      name: countries[code]?.name || "World",
+      count
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  return {
+    totalVisits: visitStats.totalVisits,
+    topCountries,
+    updatedAt: visitStats.updatedAt,
+    privacy: "Counts are aggregate only. We do not display individual visitor identity."
+  };
+}
+
+async function handleVisit(request, response) {
+  if (request.method === "GET") {
+    sendJson(response, 200, publicVisitStats());
+    return;
+  }
+
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Use GET or POST for visit stats." });
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(request);
+    const country = normalizeCountryCode(body.country);
+    visitStats.totalVisits += 1;
+    visitStats.countries[country] = (visitStats.countries[country] || 0) + 1;
+    visitStats.updatedAt = new Date().toISOString();
+    saveVisitStats();
+    sendJson(response, 200, publicVisitStats());
+  } catch (error) {
+    sendJson(response, 400, { error: error.message });
+  }
 }
 
 function readJsonBody(request) {
@@ -917,6 +985,11 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/api/ai-insight") {
     handleAiInsight(request, response);
+    return;
+  }
+
+  if (url.pathname === "/api/visit") {
+    handleVisit(request, response);
     return;
   }
 
