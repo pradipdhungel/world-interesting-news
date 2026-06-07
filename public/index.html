@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Follow trusted global headlines by country, category, language, and source with original short briefs and source attribution.">
     <meta name="twitter:image" content="/logo.svg">
     <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=shorts-auto-1">
+    <link rel="stylesheet" href="/styles.css?v=share-2">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -191,7 +191,10 @@
                   <span id="short-source"></span>
                   <span id="short-time"></span>
                 </div>
-                <a id="short-link" href="/">Read story</a>
+                <div class="short-actions">
+                  <a id="short-link" href="/">Read story</a>
+                  <button id="short-share" type="button">Share</button>
+                </div>
               </div>
             </div>
           </div>
@@ -283,12 +286,17 @@
           <p></p>
           <div class="article-footer">
             <span class="reading-time">3 min read</span>
-            <button class="ai-button" type="button">AI insight</button>
+            <span class="article-actions">
+              <button class="ai-button" type="button">AI insight</button>
+              <button class="share-button" type="button">Share</button>
+            </span>
           </div>
           <a target="_blank" rel="noopener noreferrer">Read from source</a>
         </div>
       </article>
     </template>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
     <div class="ai-modal" id="ai-modal" hidden>
       <div class="ai-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-title">
@@ -299,8 +307,8 @@
       </div>
     </div>
 
-    <script src="/seo.js?v=shorts-auto-1" defer></script>
-    <script src="/visit-stats.js?v=shorts-auto-1" defer></script>
-    <script src="/app.js?v=shorts-auto-1" defer></script>
+    <script src="/seo.js?v=share-2" defer></script>
+    <script src="/visit-stats.js?v=share-2" defer></script>
+    <script src="/app.js?v=share-2" defer></script>
   </body>
 </html>

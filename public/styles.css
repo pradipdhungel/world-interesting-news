@@ -1018,15 +1018,38 @@ h1 {
   text-transform: uppercase;
 }
 
-.short-overlay a {
+.short-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.short-overlay a,
+.short-actions button {
   justify-self: start;
   min-height: 40px;
   padding: 10px 14px;
+  border: 0;
   border-radius: 999px;
-  background: white;
-  color: #0f172a;
   font-weight: 900;
   text-decoration: none;
+}
+
+.short-overlay a {
+  background: white;
+  color: #0f172a;
+}
+
+.short-actions button {
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.short-actions button:hover {
+  background: rgba(239, 68, 68, 0.86);
 }
 
 .short-controls {
@@ -1361,7 +1384,15 @@ h1 {
   font-weight: 800;
 }
 
-.ai-button {
+.article-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ai-button,
+.share-button {
   min-height: 32px;
   padding: 0 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line));
@@ -1373,7 +1404,14 @@ h1 {
   font-weight: 900;
 }
 
-.ai-button:hover {
+.share-button {
+  border-color: color-mix(in srgb, var(--teal) 42%, var(--line));
+  background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+  color: var(--teal);
+}
+
+.ai-button:hover,
+.share-button:hover {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
 }
@@ -1389,6 +1427,26 @@ h1 {
 
 .article-card a:hover {
   text-decoration: underline;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 80;
+  max-width: min(360px, calc(100vw - 36px));
+  padding: 12px 15px;
+  border: 1px solid color-mix(in srgb, var(--teal) 38%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--teal));
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.toast[hidden] {
+  display: none;
 }
 
 .news-sidebar,

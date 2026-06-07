@@ -75,6 +75,7 @@ const shortSummary = document.querySelector("#short-summary");
 const shortSource = document.querySelector("#short-source");
 const shortTime = document.querySelector("#short-time");
 const shortLink = document.querySelector("#short-link");
+const shortShare = document.querySelector("#short-share");
 const shortProgressBar = document.querySelector("#short-progress-bar");
 const shortPrev = document.querySelector("#short-prev");
 const shortPlay = document.querySelector("#short-play");
@@ -84,6 +85,7 @@ const aiModal = document.querySelector("#ai-modal");
 const aiContent = document.querySelector("#ai-content");
 const aiTitle = document.querySelector("#ai-title");
 const aiClose = document.querySelector("#ai-close");
+const toast = document.querySelector("#toast");
 
 const translations = {
   en: {
@@ -302,6 +304,71 @@ function articleLink(article) {
   return `/article.html?id=${encodeURIComponent(article.id)}&slug=${encodeURIComponent(slug)}`;
 }
 
+function absoluteArticleUrl(article) {
+  return new URL(articleLink(article), window.location.origin).toString();
+}
+
+let toastTimer;
+
+function showToast(message) {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.hidden = true;
+  }, 2400);
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  document.body.appendChild(input);
+  input.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+  input.remove();
+  return copied;
+}
+
+async function shareArticle(article) {
+  if (!article) return;
+  const shareData = {
+    title: article.title,
+    text: article.summary || "Read this story on World Interesting News",
+    url: absoluteArticleUrl(article)
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return;
+    }
+  } catch (error) {
+    if (error.name === "AbortError") return;
+  }
+
+  if (await copyText(shareData.url)) {
+    showToast("Story link copied");
+  } else {
+    showToast("Copy this link: " + shareData.url);
+  }
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -462,6 +529,10 @@ function renderCurrentShort() {
   shortSource.textContent = article.source?.name || "Unknown source";
   shortTime.textContent = formatDate(article.publishedAt);
   shortLink.href = articleLink(article);
+  if (shortShare) {
+    shortShare.onclick = () => shareArticle(article);
+    shortShare.setAttribute("aria-label", `Share: ${article.title}`);
+  }
   shortMedia.innerHTML = "";
   shortMedia.style.backgroundImage = article.image ? `url("${article.image}")` : generatedImageBackground(article);
   shortMedia.setAttribute("role", "img");
@@ -974,6 +1045,7 @@ function createArticleCard(article, variant = "") {
   const summary = node.querySelector("p");
   const reading = node.querySelector(".reading-time");
   const aiButton = node.querySelector(".ai-button");
+  const shareButton = node.querySelector(".share-button");
   const link = node.querySelector("a");
 
   if (variant) card.classList.add(variant);
@@ -995,6 +1067,8 @@ function createArticleCard(article, variant = "") {
   summary.textContent = article.summary || "Open the original report for more details and context.";
   reading.textContent = readingTime(article);
   aiButton.addEventListener("click", () => openAiInsight(article));
+  shareButton.addEventListener("click", () => shareArticle(article));
+  shareButton.setAttribute("aria-label", `Share: ${article.title}`);
   link.href = articleLink(article);
   link.target = "";
   link.rel = "";
