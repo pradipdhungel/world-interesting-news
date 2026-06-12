@@ -1176,6 +1176,176 @@ h1 {
   display: none;
 }
 
+.fifa-center {
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--teal) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 100% 20%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 38%),
+    var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.fifa-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.fifa-header h2 {
+  margin: 4px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.fifa-header p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.fifa-refresh {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--teal) 42%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+  color: var(--teal);
+  cursor: pointer;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.fifa-refresh:hover {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 16%, var(--surface));
+}
+
+.fifa-status {
+  margin: 18px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.fifa-score-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fifa-card,
+.fifa-empty {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--soft-shadow);
+}
+
+.fifa-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.fifa-card.is-live {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.fifa-card-top,
+.fifa-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.fifa-card-top span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.fifa-card.is-live .fifa-card-top span {
+  background: var(--accent);
+  color: white;
+}
+
+.fifa-card.is-final .fifa-card-top span {
+  background: color-mix(in srgb, var(--ink) 10%, var(--soft));
+  color: var(--ink);
+}
+
+.fifa-team {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.fifa-team img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.16);
+}
+
+.fifa-team span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fifa-team strong {
+  min-width: 28px;
+  font-size: 24px;
+  text-align: right;
+}
+
+.fifa-card-bottom {
+  align-items: start;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+  line-height: 1.35;
+}
+
+.fifa-source {
+  display: inline-flex;
+  margin-top: 14px;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.fifa-source:hover {
+  text-decoration: underline;
+}
+
+.fifa-empty {
+  grid-column: 1 / -1;
+  padding: 16px;
+  color: var(--muted);
+  font-weight: 850;
+}
+
 .continue-reading {
   padding: clamp(18px, 4vw, 28px);
   border: 1px solid var(--line);
@@ -2368,9 +2538,14 @@ h1 {
 
   .news-grid,
   .continue-grid,
+  .fifa-score-grid,
   .category-sections,
   .secondary-stories {
     grid-template-columns: 1fr;
+  }
+
+  .fifa-header {
+    flex-direction: column;
   }
 
   .secondary-card {

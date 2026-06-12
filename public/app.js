@@ -8,6 +8,7 @@ const state = {
   breakingIndex: 0,
   breakingTimer: null,
   liveRefreshTimer: null,
+  fifaTimer: null,
   shorts: [],
   shortIndex: 0,
   shortPlaying: true,
@@ -61,6 +62,12 @@ const continueReadingKicker = document.querySelector("#continue-kicker");
 const continueReadingTitle = document.querySelector("#continue-title");
 const continueReadingSummary = document.querySelector("#continue-summary");
 const continueReadingClear = document.querySelector("#continue-clear");
+const fifaTitle = document.querySelector("#fifa-title");
+const fifaSummary = document.querySelector("#fifa-summary");
+const fifaStatus = document.querySelector("#fifa-status");
+const fifaScoreGrid = document.querySelector("#fifa-score-grid");
+const fifaRefresh = document.querySelector("#fifa-refresh");
+const fifaSource = document.querySelector("#fifa-source");
 const pageTitle = document.querySelector("#page-title");
 const feedLabel = document.querySelector("#feed-label");
 const updatedLabel = document.querySelector("#updated-label");
@@ -692,6 +699,90 @@ function renderContinueReading() {
   stories.forEach((story) => {
     continueReadingGrid.appendChild(createArticleCard(story, "continue-card"));
   });
+}
+
+function matchTimeLabel(match) {
+  if (match.live) return match.clock || "Live";
+  if (match.completed) return "Final";
+  const date = new Date(match.date);
+  if (Number.isNaN(date.getTime())) return match.statusLabel || "Scheduled";
+  return date.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+
+function matchStatusClass(match) {
+  if (match.live) return "is-live";
+  if (match.completed) return "is-final";
+  return "is-upcoming";
+}
+
+function renderTeam(team, side) {
+  return `
+    <div class="fifa-team ${side}">
+      <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
+      <span>${team.shortName || team.name}</span>
+      <strong>${Number(team.score || 0)}</strong>
+    </div>
+  `;
+}
+
+function renderFifaScores(payload) {
+  if (!fifaScoreGrid || !fifaStatus) return;
+  fifaScoreGrid.innerHTML = "";
+  const matches = payload.matches || [];
+  const liveCount = matches.filter((match) => match.live).length;
+
+  if (fifaTitle) fifaTitle.textContent = payload.league || "FIFA World Cup scores";
+  if (fifaSummary) {
+    fifaSummary.textContent = liveCount
+      ? `${liveCount} match${liveCount === 1 ? " is" : "es are"} live now. Scores refresh automatically.`
+      : "Live, upcoming, and final FIFA matches refresh automatically.";
+  }
+  fifaStatus.textContent = `Updated ${new Date(payload.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}${payload.cached ? " · cached" : ""}`;
+  if (fifaSource && payload.sourceUrl) fifaSource.href = payload.sourceUrl;
+
+  if (!matches.length) {
+    fifaScoreGrid.innerHTML = `<div class="fifa-empty">No FIFA matches are listed right now. Check back soon for the next fixture.</div>`;
+    return;
+  }
+
+  matches.slice(0, 6).forEach((match) => {
+    const card = document.createElement("article");
+    card.className = `fifa-card ${matchStatusClass(match)}`;
+    card.innerHTML = `
+      <div class="fifa-card-top">
+        <span>${match.live ? "Live" : match.completed ? "Final" : "Fixture"}</span>
+        <time datetime="${match.date}">${matchTimeLabel(match)}</time>
+      </div>
+      ${renderTeam(match.home, "home")}
+      ${renderTeam(match.away, "away")}
+      <div class="fifa-card-bottom">
+        <span>${match.venue || "Venue TBA"}</span>
+        <span>${match.broadcasts?.join(", ") || match.statusLabel || ""}</span>
+      </div>
+    `;
+    fifaScoreGrid.appendChild(card);
+  });
+}
+
+async function loadFifaScores() {
+  if (!fifaScoreGrid || !fifaStatus) return;
+  fifaStatus.textContent = "Refreshing FIFA scores...";
+  try {
+    const response = await fetch("/api/fifa-scores");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || payload.error || "Scores unavailable");
+    renderFifaScores(payload);
+  } catch (error) {
+    fifaStatus.textContent = `FIFA scores unavailable: ${error.message}`;
+    fifaScoreGrid.innerHTML = `<div class="fifa-empty">We could not load live scores right now. Try again in a moment.</div>`;
+  }
+}
+
+function startFifaScoreRefresh() {
+  if (state.fifaTimer) clearInterval(state.fifaTimer);
+  state.fifaTimer = setInterval(() => {
+    if (document.visibilityState === "visible") loadFifaScores();
+  }, 60000);
 }
 
 function applyTranslations() {
@@ -1494,6 +1585,7 @@ sourceSelect.addEventListener("change", () => {
   renderArticles();
 });
 refreshButton.addEventListener("click", loadNews);
+fifaRefresh?.addEventListener("click", loadFifaScores);
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
   renderContinueReading();
@@ -1542,4 +1634,7 @@ function startLiveNewsRefresh() {
   }, 180000);
 }
 
-loadMeta().then(() => loadNews().then(startLiveNewsRefresh));
+loadMeta().then(() => Promise.all([
+  loadNews().then(startLiveNewsRefresh),
+  loadFifaScores().then(startFifaScoreRefresh)
+]));

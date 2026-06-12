@@ -11,6 +11,8 @@ const SITE_LOGO_PATH = "/logo.svg";
 const STATS_FILE = path.join(__dirname, "visit-stats.json");
 let latestArticles = [];
 let visitStats = loadVisitStats();
+let fifaScoreCache = { updatedAt: 0, payload: null };
+const FIFA_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 
 const publicConfig = {
   googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
@@ -471,6 +473,91 @@ async function handleVisit(request, response) {
     sendJson(response, 200, publicVisitStats());
   } catch (error) {
     sendJson(response, 400, { error: error.message });
+  }
+}
+
+function normalizeFifaEvent(event) {
+  const competition = event.competitions?.[0] || {};
+  const status = competition.status || event.status || {};
+  const statusType = status.type || {};
+  const competitors = competition.competitors || [];
+  const home = competitors.find((team) => team.homeAway === "home") || competitors[0] || {};
+  const away = competitors.find((team) => team.homeAway === "away") || competitors[1] || {};
+  const broadcasts = competition.broadcasts?.flatMap((broadcast) => broadcast.names || []) || [];
+  const link = event.links?.find((item) => item.rel?.includes("summary"))?.href || event.links?.[0]?.href || "";
+
+  const teamShape = (team) => ({
+    name: team.team?.displayName || team.team?.shortDisplayName || "TBD",
+    shortName: team.team?.shortDisplayName || team.team?.abbreviation || team.team?.displayName || "TBD",
+    abbreviation: team.team?.abbreviation || "",
+    logo: team.team?.logo || "",
+    score: Number(team.score || 0),
+    winner: Boolean(team.winner)
+  });
+
+  return {
+    id: event.id,
+    name: event.name,
+    shortName: event.shortName,
+    date: event.date,
+    status: statusType.state || "pre",
+    statusLabel: statusType.shortDetail || statusType.detail || statusType.description || "Scheduled",
+    clock: status.displayClock || "",
+    completed: Boolean(statusType.completed),
+    live: statusType.state === "in",
+    venue: competition.venue?.fullName || competition.venue?.displayName || event.venue?.displayName || "",
+    broadcasts: [...new Set(broadcasts)].slice(0, 3),
+    home: teamShape(home),
+    away: teamShape(away),
+    link
+  };
+}
+
+async function handleFifaScores(request, response) {
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Use GET for FIFA scores." });
+    return;
+  }
+
+  const now = Date.now();
+  if (fifaScoreCache.payload && now - fifaScoreCache.updatedAt < 45000) {
+    sendJson(response, 200, { ...fifaScoreCache.payload, cached: true });
+    return;
+  }
+
+  try {
+    const scoreResponse = await fetch(FIFA_SCOREBOARD_URL, {
+      headers: { "User-Agent": `${SITE_NAME}/1.0` }
+    });
+    if (!scoreResponse.ok) throw new Error(`Scoreboard responded ${scoreResponse.status}`);
+    const scoreboard = await scoreResponse.json();
+    const league = scoreboard.leagues?.[0] || {};
+    const matches = (scoreboard.events || []).map(normalizeFifaEvent);
+    const payload = {
+      league: league.season?.displayName || league.name || "FIFA World Cup",
+      date: scoreboard.day?.date || new Date().toISOString().slice(0, 10),
+      updatedAt: new Date().toISOString(),
+      source: "ESPN",
+      sourceUrl: "https://www.espn.com/soccer/scoreboard/_/league/fifa.world",
+      matches
+    };
+    fifaScoreCache = { updatedAt: now, payload };
+    sendJson(response, 200, payload);
+  } catch (error) {
+    if (fifaScoreCache.payload) {
+      sendJson(response, 200, {
+        ...fifaScoreCache.payload,
+        cached: true,
+        warning: "Showing recent cached scores because live scores are temporarily unavailable."
+      });
+      return;
+    }
+    sendJson(response, 502, {
+      error: "FIFA scores unavailable",
+      detail: error.message,
+      matches: [],
+      updatedAt: new Date().toISOString()
+    });
   }
 }
 
@@ -990,6 +1077,11 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/api/visit") {
     handleVisit(request, response);
+    return;
+  }
+
+  if (url.pathname === "/api/fifa-scores") {
+    handleFifaScores(request, response);
     return;
   }
 
