@@ -25,6 +25,8 @@ const breadcrumbCurrent = document.querySelector("#breadcrumb-current");
 const tagList = document.querySelector("#tag-list");
 const prevArticle = document.querySelector("#prev-article");
 const nextArticle = document.querySelector("#next-article");
+const RECENT_STORIES_KEY = "worldNewsRecentStories";
+const MAX_RECENT_STORIES = 6;
 
 function formatDate(value) {
   const parsed = new Date(value);
@@ -190,6 +192,29 @@ function buildContext(article) {
   return `World Interesting News is showing an original short brief, not a copied full article. For the complete reporting, details, quotes, and updates, continue to ${sourceName} using the source link below.`;
 }
 
+function storeRecentArticle(article) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || "[]");
+    const recent = Array.isArray(existing) ? existing : [];
+    const item = {
+      id: article.id,
+      title: article.title,
+      summary: article.summary,
+      url: article.url,
+      image: article.image,
+      category: article.category,
+      country: article.country,
+      publishedAt: article.publishedAt,
+      updatedAt: article.updatedAt || article.publishedAt,
+      interestScore: article.interestScore || 0,
+      source: article.source,
+      viewedAt: new Date().toISOString()
+    };
+    const next = [item, ...recent.filter((entry) => entry?.id !== article.id)].slice(0, MAX_RECENT_STORIES);
+    localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(next));
+  } catch {}
+}
+
 function relatedStories(article) {
   return articles
     .filter((item) => item.id !== article.id)
@@ -287,6 +312,7 @@ function updateSeo(article) {
 
 function renderArticle() {
   document.title = `${article.title} | World Interesting News`;
+  storeRecentArticle(article);
   source.textContent = article.source?.name || "Unknown source";
   date.textContent = formatDate(article.publishedAt);
   if (updated) updated.textContent = `Updated ${formatDate(article.updatedAt || article.publishedAt)}`;

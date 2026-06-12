@@ -388,7 +388,7 @@ main {
 
 .breaking-strip {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 48px;
@@ -416,12 +416,73 @@ main {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
+  transition: color 160ms ease;
 }
 
+.ticker:hover {
+  color: var(--accent-strong);
+}
+
+.breaking-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+#breaking-count,
 #breaking-time {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+#breaking-count {
+  color: var(--accent-strong);
+}
+
+.breaking-controls {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.breaking-controls button {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  cursor: pointer;
+}
+
+.breaking-controls button::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  content: "";
+  border-top: 2px solid var(--muted);
+  border-left: 2px solid var(--muted);
+}
+
+#breaking-prev::before {
+  transform: translate(-35%, -50%) rotate(-45deg);
+}
+
+#breaking-next::before {
+  transform: translate(-65%, -50%) rotate(135deg);
+}
+
+.breaking-controls button:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.breaking-controls button:hover::before {
+  border-color: var(--accent-strong);
 }
 
 .discovery-bar {
@@ -1109,6 +1170,59 @@ h1 {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.9fr);
   gap: 18px;
+}
+
+.continue-reading[hidden] {
+  display: none;
+}
+
+.continue-reading {
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 12%, transparent), transparent 32%),
+    linear-gradient(135deg, color-mix(in srgb, var(--soft) 85%, transparent), var(--surface));
+  box-shadow: var(--soft-shadow);
+}
+
+.continue-summary {
+  max-width: 760px;
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.continue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.continue-card .article-media {
+  min-height: 170px;
+}
+
+.continue-card .article-body {
+  display: grid;
+  gap: 12px;
+}
+
+.continue-clear {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.continue-clear:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .secondary-stories {
@@ -2253,6 +2367,7 @@ h1 {
   }
 
   .news-grid,
+  .continue-grid,
   .category-sections,
   .secondary-stories {
     grid-template-columns: 1fr;
@@ -2313,6 +2428,11 @@ h1 {
 
   .ticker {
     white-space: normal;
+  }
+
+  .breaking-meta,
+  .breaking-controls {
+    justify-content: flex-start;
   }
 
   h1 {

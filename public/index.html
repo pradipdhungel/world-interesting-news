@@ -65,8 +65,15 @@
     <main id="main-content">
       <section class="breaking-strip" aria-label="Breaking news">
         <strong>Breaking</strong>
-        <div class="ticker" id="breaking-ticker">Loading top stories from trusted sources...</div>
-        <span id="breaking-time">Live</span>
+        <a class="ticker" id="breaking-ticker" href="/">Loading top stories from trusted sources...</a>
+        <div class="breaking-meta">
+          <span id="breaking-count">Live</span>
+          <span id="breaking-time">Live</span>
+        </div>
+        <div class="breaking-controls" aria-label="Breaking news controls">
+          <button id="breaking-prev" type="button" aria-label="Previous breaking story"></button>
+          <button id="breaking-next" type="button" aria-label="Next breaking story"></button>
+        </div>
       </section>
 
       <section class="discovery-bar" aria-label="Search and language">
@@ -156,6 +163,18 @@
       </section>
 
       <section id="error-panel" class="error-panel" hidden></section>
+
+      <section class="section-block continue-reading" id="continue-reading" hidden aria-label="Continue reading">
+        <div class="section-heading">
+          <div>
+            <span id="continue-kicker">Continue</span>
+            <h2 id="continue-title">Pick up where you left off</h2>
+          </div>
+          <button class="continue-clear" id="continue-clear" type="button">Clear history</button>
+        </div>
+        <p class="continue-summary" id="continue-summary">Stories you opened recently stay here so you can come back faster.</p>
+        <div class="continue-grid" id="continue-grid"></div>
+      </section>
 
       <section class="shorts-section" id="shorts-section" hidden aria-label="News shorts">
         <div class="shorts-heading">
@@ -307,8 +326,8 @@
       </div>
     </div>
 
-    <script src="/seo.js?v=share-2" defer></script>
-    <script src="/visit-stats.js?v=share-2" defer></script>
-    <script src="/app.js?v=share-2" defer></script>
+    <script src="/seo.js?v=continue-1" defer></script>
+    <script src="/visit-stats.js?v=continue-1" defer></script>
+    <script src="/app.js?v=continue-1" defer></script>
   </body>
 </html>

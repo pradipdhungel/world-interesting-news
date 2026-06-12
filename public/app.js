@@ -4,6 +4,10 @@ const state = {
   categories: [],
   languages: [],
   sourceLogos: {},
+  breakingStories: [],
+  breakingIndex: 0,
+  breakingTimer: null,
+  liveRefreshTimer: null,
   shorts: [],
   shortIndex: 0,
   shortPlaying: true,
@@ -51,11 +55,20 @@ const searchInput = document.querySelector("#search-input");
 const grid = document.querySelector("#news-grid");
 const template = document.querySelector("#article-template");
 const errorPanel = document.querySelector("#error-panel");
+const continueReadingSection = document.querySelector("#continue-reading");
+const continueReadingGrid = document.querySelector("#continue-grid");
+const continueReadingKicker = document.querySelector("#continue-kicker");
+const continueReadingTitle = document.querySelector("#continue-title");
+const continueReadingSummary = document.querySelector("#continue-summary");
+const continueReadingClear = document.querySelector("#continue-clear");
 const pageTitle = document.querySelector("#page-title");
 const feedLabel = document.querySelector("#feed-label");
 const updatedLabel = document.querySelector("#updated-label");
 const breakingTicker = document.querySelector("#breaking-ticker");
+const breakingCount = document.querySelector("#breaking-count");
 const breakingTime = document.querySelector("#breaking-time");
+const breakingPrev = document.querySelector("#breaking-prev");
+const breakingNext = document.querySelector("#breaking-next");
 const featuredStory = document.querySelector("#featured-story");
 const secondaryStories = document.querySelector("#secondary-stories");
 const trendingList = document.querySelector("#trending-list");
@@ -86,6 +99,8 @@ const aiContent = document.querySelector("#ai-content");
 const aiTitle = document.querySelector("#ai-title");
 const aiClose = document.querySelector("#ai-close");
 const toast = document.querySelector("#toast");
+const RECENT_STORIES_KEY = "worldNewsRecentStories";
+const MAX_RECENT_STORIES = 6;
 
 const translations = {
   en: {
@@ -101,6 +116,11 @@ const translations = {
     refresh: "Refresh",
     reset: "Reset",
     sourceCta: "Read from source",
+    continueKicker: "Continue",
+    continueTitle: "Pick up where you left off",
+    continueSummary: "Stories you opened recently stay here so you can come back faster.",
+    continueEmpty: "Open a story and it will show up here for your next visit.",
+    clearHistory: "Clear history",
     noStories: "No stories found for these filters.",
     loading: "Loading latest stories...",
     feedUnavailable: "Feed unavailable",
@@ -139,6 +159,11 @@ const translations = {
     refresh: "ताज़ा करें",
     reset: "रीसेट",
     sourceCta: "स्रोत से पढ़ें",
+    continueKicker: "जारी रखें",
+    continueTitle: "यहीं से फिर शुरू करें",
+    continueSummary: "जो खबरें आपने खोली हैं वे अगली बार जल्दी लौटने के लिए यहां रहेंगी।",
+    continueEmpty: "कोई खबर खोलें, वह आपकी अगली विजिट के लिए यहां दिखाई देगी।",
+    clearHistory: "इतिहास साफ करें",
     noStories: "इन फ़िल्टरों के लिए कोई खबर नहीं मिली।",
     loading: "नई खबरें लोड हो रही हैं...",
     feedUnavailable: "फ़ीड उपलब्ध नहीं है",
@@ -164,6 +189,11 @@ const translations = {
     refresh: "ताजा गर्नुहोस्",
     reset: "रिसेट",
     sourceCta: "स्रोतबाट पढ्नुहोस्",
+    continueKicker: "जारी राख्नुहोस्",
+    continueTitle: "तपाईंले छोडेको ठाउँबाट सुरु गर्नुहोस्",
+    continueSummary: "तपाईंले हालै खोलेका समाचारहरू फेरि फर्कन सजिलो बनाउन यहाँ रहनेछन्।",
+    continueEmpty: "एउटा समाचार खोल्नुहोस्, अर्को पटक यहीँ देखिनेछ।",
+    clearHistory: "इतिहास हटाउनुहोस्",
     noStories: "यी फिल्टरका लागि समाचार भेटिएन।",
     loading: "नयाँ समाचार लोड हुँदैछ...",
     feedUnavailable: "फिड उपलब्ध छैन",
@@ -189,6 +219,11 @@ const translations = {
     refresh: "Actualizar",
     reset: "Restablecer",
     sourceCta: "Leer en la fuente",
+    continueKicker: "Continuar",
+    continueTitle: "Retoma donde lo dejaste",
+    continueSummary: "Las historias que abriste recientemente se guardan aqui para volver mas rapido.",
+    continueEmpty: "Abre una historia y aparecera aqui en tu proxima visita.",
+    clearHistory: "Borrar historial",
     noStories: "No se encontraron noticias para estos filtros.",
     loading: "Cargando noticias recientes...",
     feedUnavailable: "Fuente no disponible",
@@ -214,6 +249,11 @@ const translations = {
     refresh: "Actualiser",
     reset: "Reinitialiser",
     sourceCta: "Lire la source",
+    continueKicker: "Reprendre",
+    continueTitle: "Reprenez la ou vous vous etiez arrete",
+    continueSummary: "Les articles ouverts recemment restent ici pour vous aider a revenir plus vite.",
+    continueEmpty: "Ouvrez un article et il apparaitra ici lors de votre prochaine visite.",
+    clearHistory: "Effacer l'historique",
     noStories: "Aucun article trouve pour ces filtres.",
     loading: "Chargement des dernieres nouvelles...",
     feedUnavailable: "Flux indisponible",
@@ -624,6 +664,36 @@ function currentText() {
   return translations[languageSelect?.value] || translations.en;
 }
 
+function readRecentStories() {
+  try {
+    const items = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || "[]");
+    return Array.isArray(items) ? items.filter((item) => item && item.id && item.title) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentStories(items) {
+  try {
+    localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(items.slice(0, MAX_RECENT_STORIES)));
+  } catch {}
+}
+
+function renderContinueReading() {
+  if (!continueReadingSection || !continueReadingGrid) return;
+  const stories = readRecentStories();
+  continueReadingGrid.innerHTML = "";
+  continueReadingSection.hidden = stories.length === 0;
+  if (continueReadingSummary) {
+    continueReadingSummary.textContent = stories.length ? currentText().continueSummary : currentText().continueEmpty;
+  }
+  if (!stories.length) return;
+
+  stories.forEach((story) => {
+    continueReadingGrid.appendChild(createArticleCard(story, "continue-card"));
+  });
+}
+
 function applyTranslations() {
   const text = currentText();
   const canonical = state.query ? "/" : window.location.pathname;
@@ -649,6 +719,10 @@ function applyTranslations() {
   document.querySelector('label[for="language-select"]').textContent = text.language;
   document.querySelector('label[for="sort-button"]').textContent = text.sort;
   document.querySelector('label[for="source-button"]').textContent = text.source;
+  if (continueReadingKicker) continueReadingKicker.textContent = text.continueKicker;
+  if (continueReadingTitle) continueReadingTitle.textContent = text.continueTitle;
+  if (continueReadingSummary) continueReadingSummary.textContent = text.continueSummary;
+  if (continueReadingClear) continueReadingClear.textContent = text.clearHistory;
   refreshButton.textContent = text.refresh;
   resetButton.textContent = text.reset;
   if (sourceSelect.options[0]) {
@@ -1090,11 +1164,55 @@ function createCompactStory(article, index) {
   return link;
 }
 
-function renderBreakingNews(articles) {
+function stopBreakingTimer() {
+  if (state.breakingTimer) {
+    clearInterval(state.breakingTimer);
+    state.breakingTimer = null;
+  }
+}
+
+function updateBreakingStory() {
   if (!breakingTicker || !breakingTime) return;
-  const lead = articles[0];
-  breakingTicker.textContent = lead ? lead.title : currentText().loading;
-  breakingTime.textContent = lead ? formatDate(lead.publishedAt) : "Live";
+  const story = state.breakingStories[state.breakingIndex];
+
+  if (!story) {
+    breakingTicker.textContent = currentText().loading;
+    breakingTicker.href = "/";
+    if (breakingCount) breakingCount.textContent = "Live";
+    breakingTime.textContent = "Live";
+    return;
+  }
+
+  breakingTicker.textContent = `${story.title} - ${story.source?.name || "Source"}`;
+  breakingTicker.href = articleLink(story);
+  breakingTicker.setAttribute("aria-label", `Read breaking story: ${story.title}`);
+  if (breakingCount) breakingCount.textContent = `${state.breakingIndex + 1}/${state.breakingStories.length}`;
+  breakingTime.textContent = formatDate(story.publishedAt);
+}
+
+function nextBreakingStory() {
+  if (!state.breakingStories.length) return;
+  state.breakingIndex = (state.breakingIndex + 1) % state.breakingStories.length;
+  updateBreakingStory();
+}
+
+function previousBreakingStory() {
+  if (!state.breakingStories.length) return;
+  state.breakingIndex = (state.breakingIndex - 1 + state.breakingStories.length) % state.breakingStories.length;
+  updateBreakingStory();
+}
+
+function startBreakingRotation() {
+  stopBreakingTimer();
+  if (state.breakingStories.length < 2) return;
+  state.breakingTimer = setInterval(nextBreakingStory, 5500);
+}
+
+function renderBreakingNews(articles) {
+  state.breakingStories = sortArticles(articles).slice(0, 10);
+  if (state.breakingIndex >= state.breakingStories.length) state.breakingIndex = 0;
+  updateBreakingStory();
+  startBreakingRotation();
 }
 
 function renderLeadStories(articles) {
@@ -1154,6 +1272,7 @@ function renderArticles() {
   feedLabel.textContent = `${articles.length} ${currentText().sourcedStories}`;
   renderCategoryNavigation();
   renderBreakingNews(articles);
+  renderContinueReading();
 
   if (!articles.length) {
     if (featuredStory) featuredStory.innerHTML = "";
@@ -1231,6 +1350,7 @@ async function loadNews() {
       openShorts({ auto: true, preferUserCountry: true });
     }
   } catch (error) {
+    renderContinueReading();
     grid.innerHTML = "";
     errorPanel.hidden = false;
     errorPanel.textContent = `${currentText().liveError}: ${error.message}`;
@@ -1374,6 +1494,19 @@ sourceSelect.addEventListener("change", () => {
   renderArticles();
 });
 refreshButton.addEventListener("click", loadNews);
+continueReadingClear?.addEventListener("click", () => {
+  writeRecentStories([]);
+  renderContinueReading();
+  showToast(currentText().clearHistory);
+});
+breakingPrev?.addEventListener("click", () => {
+  previousBreakingStory();
+  startBreakingRotation();
+});
+breakingNext?.addEventListener("click", () => {
+  nextBreakingStory();
+  startBreakingRotation();
+});
 resetButton.addEventListener("click", () => {
   state.query = "";
   searchInput.value = "";
@@ -1400,4 +1533,13 @@ document.querySelector(".newsletter-form")?.addEventListener("submit", (event) =
 });
 
 initTheme();
-loadMeta().then(loadNews);
+renderContinueReading();
+
+function startLiveNewsRefresh() {
+  if (state.liveRefreshTimer) clearInterval(state.liveRefreshTimer);
+  state.liveRefreshTimer = setInterval(() => {
+    if (document.visibilityState === "visible") loadNews();
+  }, 180000);
+}
+
+loadMeta().then(() => loadNews().then(startLiveNewsRefresh));
