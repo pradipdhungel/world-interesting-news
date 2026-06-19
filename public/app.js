@@ -62,6 +62,12 @@ const continueReadingKicker = document.querySelector("#continue-kicker");
 const continueReadingTitle = document.querySelector("#continue-title");
 const continueReadingSummary = document.querySelector("#continue-summary");
 const continueReadingClear = document.querySelector("#continue-clear");
+const myNewsSection = document.querySelector("#my-news");
+const myNewsSummary = document.querySelector("#my-news-summary");
+const myNewsPreferences = document.querySelector("#my-news-preferences");
+const myNewsGrid = document.querySelector("#my-news-grid");
+const followCountryButton = document.querySelector("#follow-country");
+const followCategoryButton = document.querySelector("#follow-category");
 const fifaTitle = document.querySelector("#fifa-title");
 const fifaSummary = document.querySelector("#fifa-summary");
 const fifaStatus = document.querySelector("#fifa-status");
@@ -106,6 +112,7 @@ const aiContent = document.querySelector("#ai-content");
 const aiTitle = document.querySelector("#ai-title");
 const aiClose = document.querySelector("#ai-close");
 const toast = document.querySelector("#toast");
+const MY_NEWS_KEY = "worldNewsPreferences";
 const RECENT_STORIES_KEY = "worldNewsRecentStories";
 const MAX_RECENT_STORIES = 6;
 
@@ -669,6 +676,106 @@ function toggleShortPlayback() {
 
 function currentText() {
   return translations[languageSelect?.value] || translations.en;
+}
+
+function readMyNewsPreferences() {
+  try {
+    const preferences = JSON.parse(localStorage.getItem(MY_NEWS_KEY) || "{}");
+    return {
+      countries: Array.isArray(preferences.countries) ? preferences.countries : [],
+      categories: Array.isArray(preferences.categories) ? preferences.categories : []
+    };
+  } catch {
+    return { countries: [], categories: [] };
+  }
+}
+
+function writeMyNewsPreferences(preferences) {
+  try {
+    localStorage.setItem(MY_NEWS_KEY, JSON.stringify({
+      countries: [...new Set(preferences.countries || [])].slice(0, 8),
+      categories: [...new Set(preferences.categories || [])].slice(0, 8)
+    }));
+  } catch {}
+}
+
+function toggleMyNewsPreference(type, value) {
+  if (!value || value === "world") return;
+  const preferences = readMyNewsPreferences();
+  const list = preferences[type] || [];
+  preferences[type] = list.includes(value)
+    ? list.filter((item) => item !== value)
+    : [...list, value];
+  writeMyNewsPreferences(preferences);
+  renderMyNews();
+}
+
+function countryNameById(countryId) {
+  return state.countries.find((country) => country.id === countryId)?.name || countryId;
+}
+
+function articleMatchesMyNews(article, preferences) {
+  const articleCountry = String(article.countryCode || "").toLowerCase();
+  return preferences.countries.includes(articleCountry) || preferences.categories.includes(article.category);
+}
+
+function renderPreferenceChip(type, value) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "my-news-chip";
+  button.textContent = type === "countries" ? countryNameById(value) : normalizeCategory(value);
+  button.setAttribute("aria-label", `Remove ${button.textContent} from My News`);
+  button.addEventListener("click", () => toggleMyNewsPreference(type, value));
+  return button;
+}
+
+function renderMyNews() {
+  if (!myNewsSection || !myNewsPreferences || !myNewsGrid) return;
+  const preferences = readMyNewsPreferences();
+  const hasPreferences = preferences.countries.length || preferences.categories.length;
+  const matches = hasPreferences
+    ? sortArticles(state.articles.filter((article) => articleMatchesMyNews(article, preferences))).slice(0, 6)
+    : [];
+
+  myNewsPreferences.innerHTML = "";
+  myNewsGrid.innerHTML = "";
+  [...preferences.countries.map((value) => ["countries", value]), ...preferences.categories.map((value) => ["categories", value])]
+    .forEach(([type, value]) => myNewsPreferences.appendChild(renderPreferenceChip(type, value)));
+
+  const country = currentCountry();
+  if (followCountryButton) {
+    const countryId = country?.id || "world";
+    const followed = preferences.countries.includes(countryId);
+    followCountryButton.textContent = followed ? `Following ${country.name}` : countryId === "world" ? "Choose a country to follow" : `Follow ${country.name}`;
+    followCountryButton.disabled = countryId === "world";
+  }
+  if (followCategoryButton) {
+    const category = categorySelect.value || "top";
+    const followed = preferences.categories.includes(category);
+    followCategoryButton.textContent = followed ? `Following ${normalizeCategory(category)}` : `Follow ${normalizeCategory(category)}`;
+  }
+
+  if (myNewsSummary) {
+    myNewsSummary.textContent = hasPreferences
+      ? matches.length
+        ? `${matches.length} stories match your saved interests. Tap a chip to remove it.`
+        : "Your interests are saved. Matching stories will appear as the feed refreshes."
+      : "Follow the country and topic you are browsing to build a faster personal feed.";
+  }
+
+  if (!hasPreferences) {
+    myNewsGrid.innerHTML = `<div class="my-news-empty">Start by choosing a country or topic above, then My News will collect matching stories here.</div>`;
+    return;
+  }
+
+  if (!matches.length) {
+    myNewsGrid.innerHTML = `<div class="my-news-empty">No matching stories in this feed yet. Try Refresh or follow another topic.</div>`;
+    return;
+  }
+
+  matches.forEach((article) => {
+    myNewsGrid.appendChild(createArticleCard(article, "my-news-card"));
+  });
 }
 
 function readRecentStories() {
@@ -1363,6 +1470,7 @@ function renderArticles() {
   feedLabel.textContent = `${articles.length} ${currentText().sourcedStories}`;
   renderCategoryNavigation();
   renderBreakingNews(articles);
+  renderMyNews();
   renderContinueReading();
 
   if (!articles.length) {
@@ -1504,6 +1612,7 @@ async function loadMeta() {
 
 countrySelect.addEventListener("change", () => {
   updateCountryButton();
+  renderMyNews();
   updateUrlState();
   loadNews();
 });
@@ -1569,6 +1678,7 @@ sourceButton.addEventListener("click", () => {
 categorySelect.addEventListener("change", () => {
   syncCategoryPicker();
   renderCategoryNavigation();
+  renderMyNews();
   updateUrlState();
   loadNews();
 });
@@ -1585,6 +1695,13 @@ sourceSelect.addEventListener("change", () => {
   renderArticles();
 });
 refreshButton.addEventListener("click", loadNews);
+followCountryButton?.addEventListener("click", () => {
+  const country = currentCountry();
+  if (country?.id && country.id !== "world") toggleMyNewsPreference("countries", country.id);
+});
+followCategoryButton?.addEventListener("click", () => {
+  toggleMyNewsPreference("categories", categorySelect.value || "top");
+});
 fifaRefresh?.addEventListener("click", loadFifaScores);
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
@@ -1625,6 +1742,7 @@ document.querySelector(".newsletter-form")?.addEventListener("submit", (event) =
 });
 
 initTheme();
+renderMyNews();
 renderContinueReading();
 
 function startLiveNewsRefresh() {

@@ -1346,6 +1346,100 @@ h1 {
   font-weight: 850;
 }
 
+.my-news {
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 32%),
+    linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--soft) 86%, transparent));
+  box-shadow: var(--soft-shadow);
+}
+
+.my-news-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.my-news-header h2 {
+  margin: 4px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.my-news-header p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.my-news-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.my-news-actions button,
+.my-news-chip {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.my-news-actions button:disabled {
+  border-color: var(--line);
+  background: var(--soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.my-news-actions button:not(:disabled):hover,
+.my-news-chip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+}
+
+.my-news-preferences {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.my-news-chip::after {
+  content: " x";
+  color: var(--muted);
+}
+
+.my-news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.my-news-card .article-media {
+  min-height: 170px;
+}
+
+.my-news-empty {
+  grid-column: 1 / -1;
+  padding: 16px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 36%, var(--line));
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-weight: 850;
+}
+
 .continue-reading {
   padding: clamp(18px, 4vw, 28px);
   border: 1px solid var(--line);
@@ -2537,6 +2631,7 @@ h1 {
   }
 
   .news-grid,
+  .my-news-grid,
   .continue-grid,
   .fifa-score-grid,
   .category-sections,
@@ -2546,6 +2641,14 @@ h1 {
 
   .fifa-header {
     flex-direction: column;
+  }
+
+  .my-news-header {
+    flex-direction: column;
+  }
+
+  .my-news-actions {
+    justify-content: flex-start;
   }
 
   .secondary-card {
