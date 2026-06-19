@@ -62,12 +62,21 @@ const continueReadingKicker = document.querySelector("#continue-kicker");
 const continueReadingTitle = document.querySelector("#continue-title");
 const continueReadingSummary = document.querySelector("#continue-summary");
 const continueReadingClear = document.querySelector("#continue-clear");
+const savedBriefingsKicker = document.querySelector("#saved-briefings-kicker");
+const savedBriefingsTitle = document.querySelector("#saved-briefings-title");
+const savedBriefingsSummary = document.querySelector("#saved-briefings-summary");
+const savedBriefingsGrid = document.querySelector("#saved-briefings-grid");
+const saveBriefingButton = document.querySelector("#save-briefing");
 const myNewsSection = document.querySelector("#my-news");
 const myNewsSummary = document.querySelector("#my-news-summary");
 const myNewsPreferences = document.querySelector("#my-news-preferences");
 const myNewsGrid = document.querySelector("#my-news-grid");
 const followCountryButton = document.querySelector("#follow-country");
 const followCategoryButton = document.querySelector("#follow-category");
+const savedStoriesSection = document.querySelector("#saved-stories");
+const savedStoriesGrid = document.querySelector("#saved-grid");
+const savedStoriesSummary = document.querySelector("#saved-summary");
+const savedStoriesClear = document.querySelector("#saved-clear");
 const fifaTitle = document.querySelector("#fifa-title");
 const fifaSummary = document.querySelector("#fifa-summary");
 const fifaStatus = document.querySelector("#fifa-status");
@@ -113,6 +122,10 @@ const aiTitle = document.querySelector("#ai-title");
 const aiClose = document.querySelector("#ai-close");
 const toast = document.querySelector("#toast");
 const MY_NEWS_KEY = "worldNewsPreferences";
+const SAVED_BRIEFINGS_KEY = "worldNewsSavedBriefings";
+const MAX_SAVED_BRIEFINGS = 6;
+const SAVED_STORIES_KEY = "worldNewsSavedStories";
+const MAX_SAVED_STORIES = 12;
 const RECENT_STORIES_KEY = "worldNewsRecentStories";
 const MAX_RECENT_STORIES = 6;
 
@@ -778,6 +791,70 @@ function renderMyNews() {
   });
 }
 
+function savedArticleShape(article) {
+  return {
+    id: article.id,
+    title: article.title,
+    summary: article.summary,
+    url: article.url,
+    image: article.image,
+    category: article.category,
+    country: article.country,
+    countryCode: article.countryCode,
+    publishedAt: article.publishedAt,
+    updatedAt: article.updatedAt || article.publishedAt,
+    interestScore: article.interestScore || 0,
+    source: article.source,
+    savedAt: new Date().toISOString()
+  };
+}
+
+function readSavedStories() {
+  try {
+    const stories = JSON.parse(localStorage.getItem(SAVED_STORIES_KEY) || "[]");
+    return Array.isArray(stories) ? stories.filter((story) => story && story.id && story.title) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedStories(stories) {
+  try {
+    localStorage.setItem(SAVED_STORIES_KEY, JSON.stringify(stories.slice(0, MAX_SAVED_STORIES)));
+  } catch {}
+}
+
+function isArticleSaved(article) {
+  return readSavedStories().some((story) => story.id === article.id);
+}
+
+function toggleSavedStory(article) {
+  const saved = readSavedStories();
+  const exists = saved.some((story) => story.id === article.id);
+  const next = exists
+    ? saved.filter((story) => story.id !== article.id)
+    : [savedArticleShape(article), ...saved].slice(0, MAX_SAVED_STORIES);
+  writeSavedStories(next);
+  renderSavedStories();
+  renderArticles();
+  showToast(exists ? "Removed from saved stories" : "Saved for later");
+}
+
+function renderSavedStories() {
+  if (!savedStoriesSection || !savedStoriesGrid) return;
+  const stories = readSavedStories();
+  savedStoriesGrid.innerHTML = "";
+  savedStoriesSection.hidden = stories.length === 0;
+  if (savedStoriesSummary) {
+    savedStoriesSummary.textContent = stories.length
+      ? `${stories.length} saved stor${stories.length === 1 ? "y" : "ies"} ready when you come back.`
+      : "Stories you save will stay here for quick reading later.";
+  }
+  stories.forEach((story) => {
+    savedStoriesGrid.appendChild(createArticleCard(story, "saved-card"));
+  });
+}
+
 function readRecentStories() {
   try {
     const items = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || "[]");
@@ -1317,6 +1394,7 @@ function createArticleCard(article, variant = "") {
   const summary = node.querySelector("p");
   const reading = node.querySelector(".reading-time");
   const aiButton = node.querySelector(".ai-button");
+  const saveButton = node.querySelector(".save-button");
   const shareButton = node.querySelector(".share-button");
   const link = node.querySelector("a");
 
@@ -1339,6 +1417,13 @@ function createArticleCard(article, variant = "") {
   summary.textContent = article.summary || "Open the original report for more details and context.";
   reading.textContent = readingTime(article);
   aiButton.addEventListener("click", () => openAiInsight(article));
+  if (saveButton) {
+    const saved = isArticleSaved(article);
+    saveButton.textContent = saved ? "Saved" : "Save";
+    saveButton.setAttribute("aria-pressed", String(saved));
+    saveButton.setAttribute("aria-label", `${saved ? "Remove saved story" : "Save for later"}: ${article.title}`);
+    saveButton.addEventListener("click", () => toggleSavedStory(article));
+  }
   shareButton.addEventListener("click", () => shareArticle(article));
   shareButton.setAttribute("aria-label", `Share: ${article.title}`);
   link.href = articleLink(article);
@@ -1471,6 +1556,7 @@ function renderArticles() {
   renderCategoryNavigation();
   renderBreakingNews(articles);
   renderMyNews();
+  renderSavedStories();
   renderContinueReading();
 
   if (!articles.length) {
@@ -1702,6 +1788,12 @@ followCountryButton?.addEventListener("click", () => {
 followCategoryButton?.addEventListener("click", () => {
   toggleMyNewsPreference("categories", categorySelect.value || "top");
 });
+savedStoriesClear?.addEventListener("click", () => {
+  writeSavedStories([]);
+  renderSavedStories();
+  renderArticles();
+  showToast("Saved stories cleared");
+});
 fifaRefresh?.addEventListener("click", loadFifaScores);
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
@@ -1743,6 +1835,7 @@ document.querySelector(".newsletter-form")?.addEventListener("submit", (event) =
 
 initTheme();
 renderMyNews();
+renderSavedStories();
 renderContinueReading();
 
 function startLiveNewsRefresh() {
