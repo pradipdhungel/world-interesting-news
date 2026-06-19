@@ -691,6 +691,153 @@ function currentText() {
   return translations[languageSelect?.value] || translations.en;
 }
 
+function briefingText(key) {
+  const fallback = {
+    savedBriefingsKicker: "Briefings",
+    savedBriefingsTitle: "Save this briefing for next time",
+    savedBriefingsSummary: "Keep a country, topic, language, and search combination ready for one-tap return visits.",
+    saveBriefing: "Save current briefing",
+    savedBriefingsEmpty: "No saved briefings yet. Save this setup to reopen it with one tap next time.",
+    openBriefing: "Open briefing",
+    removeBriefing: "Remove",
+    briefingSaved: "Briefing saved",
+    briefingRemoved: "Briefing removed",
+    briefingAlreadySaved: "This briefing is already saved",
+    activeBriefing: "Active",
+    briefingBadge: "Briefing",
+    searchBriefing: "Search"
+  };
+  const text = currentText();
+  return text[key] || fallback[key] || "";
+}
+
+function readSavedBriefings() {
+  try {
+    const items = JSON.parse(localStorage.getItem(SAVED_BRIEFINGS_KEY) || "[]");
+    return Array.isArray(items) ? items.filter((item) => item && item.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedBriefings(items) {
+  try {
+    localStorage.setItem(SAVED_BRIEFINGS_KEY, JSON.stringify(items.slice(0, MAX_SAVED_BRIEFINGS)));
+  } catch {}
+}
+
+function currentBriefingDraft() {
+  return {
+    country: countrySelect.value || "world",
+    category: categorySelect.value || "top",
+    language: languageSelect.value || "en",
+    sort: sortSelect.value || "interesting",
+    query: state.query || ""
+  };
+}
+
+function sameBriefing(a, b) {
+  return a.country === b.country
+    && a.category === b.category
+    && a.language === b.language
+    && a.sort === b.sort
+    && (a.query || "") === (b.query || "");
+}
+
+function languageNameById(languageId) {
+  return state.languages.find((language) => language.id === languageId)?.name || languageId || "English";
+}
+
+function briefingLabel(briefing) {
+  const country = countryNameById(briefing.country || "world");
+  const category = normalizeCategory(briefing.category || "top");
+  const query = String(briefing.query || "").trim();
+  return query ? `${country} ${category}: ${query}` : `${country} ${category}`;
+}
+
+function briefingMeta(briefing) {
+  const sortName = currentText().sorts?.[briefing.sort] || briefing.sort || currentText().sorts?.interesting || "Most interesting";
+  const bits = [languageNameById(briefing.language || "en"), sortName];
+  if (briefing.query) bits.push(`${briefingText("searchBriefing")}: ${briefing.query}`);
+  return bits.join(" | ");
+}
+
+function applySavedBriefing(briefing) {
+  if (!briefing) return;
+  state.query = briefing.query || "";
+  searchInput.value = state.query;
+  languageSelect.value = briefing.language || "en";
+  sortSelect.value = briefing.sort || "interesting";
+  if (state.countries.some((country) => country.id === briefing.country)) {
+    countrySelect.value = briefing.country;
+  }
+  if (state.categories.includes(briefing.category)) {
+    categorySelect.value = briefing.category;
+  }
+  applyTranslations();
+  updateCountryButton();
+  syncCategoryPicker();
+  syncSortPicker();
+  updateUrlState();
+  loadNews();
+}
+
+function removeSavedBriefing(briefingId) {
+  writeSavedBriefings(readSavedBriefings().filter((briefing) => briefing.id !== briefingId));
+  renderSavedBriefings();
+  showToast(briefingText("briefingRemoved"));
+}
+
+function saveCurrentBriefing() {
+  const draft = currentBriefingDraft();
+  const briefings = readSavedBriefings();
+
+  if (briefings.some((briefing) => sameBriefing(briefing, draft))) {
+    showToast(briefingText("briefingAlreadySaved"));
+    return;
+  }
+
+  writeSavedBriefings([{
+    id: `briefing-${Date.now()}`,
+    ...draft,
+    createdAt: new Date().toISOString()
+  }, ...briefings]);
+  renderSavedBriefings();
+  showToast(briefingText("briefingSaved"));
+}
+
+function renderSavedBriefings() {
+  if (!savedBriefingsGrid) return;
+  const briefings = readSavedBriefings();
+  const current = currentBriefingDraft();
+  savedBriefingsGrid.innerHTML = "";
+
+  if (!briefings.length) {
+    savedBriefingsGrid.innerHTML = `<div class="saved-briefing-empty">${briefingText("savedBriefingsEmpty")}</div>`;
+    return;
+  }
+
+  briefings.forEach((briefing) => {
+    const card = document.createElement("article");
+    const active = sameBriefing(briefing, current);
+    card.className = `saved-briefing-card${active ? " is-active" : ""}`;
+    card.innerHTML = `
+      <div class="saved-briefing-top">
+        <span>${active ? briefingText("activeBriefing") : briefingText("briefingBadge")}</span>
+        <strong>${escapeHtml(briefingLabel(briefing))}</strong>
+      </div>
+      <p>${escapeHtml(briefingMeta(briefing))}</p>
+      <div class="saved-briefing-actions">
+        <button type="button" class="saved-briefing-open">${briefingText("openBriefing")}</button>
+        <button type="button" class="saved-briefing-remove">${briefingText("removeBriefing")}</button>
+      </div>
+    `;
+    card.querySelector(".saved-briefing-open").addEventListener("click", () => applySavedBriefing(briefing));
+    card.querySelector(".saved-briefing-remove").addEventListener("click", () => removeSavedBriefing(briefing.id));
+    savedBriefingsGrid.appendChild(card);
+  });
+}
+
 function readMyNewsPreferences() {
   try {
     const preferences = JSON.parse(localStorage.getItem(MY_NEWS_KEY) || "{}");
@@ -998,6 +1145,10 @@ function applyTranslations() {
   if (continueReadingTitle) continueReadingTitle.textContent = text.continueTitle;
   if (continueReadingSummary) continueReadingSummary.textContent = text.continueSummary;
   if (continueReadingClear) continueReadingClear.textContent = text.clearHistory;
+  if (savedBriefingsKicker) savedBriefingsKicker.textContent = briefingText("savedBriefingsKicker");
+  if (savedBriefingsTitle) savedBriefingsTitle.textContent = briefingText("savedBriefingsTitle");
+  if (savedBriefingsSummary) savedBriefingsSummary.textContent = briefingText("savedBriefingsSummary");
+  if (saveBriefingButton) saveBriefingButton.textContent = briefingText("saveBriefing");
   refreshButton.textContent = text.refresh;
   resetButton.textContent = text.reset;
   if (sourceSelect.options[0]) {
@@ -1014,6 +1165,7 @@ function applyTranslations() {
   syncSortPicker();
   syncSourcePicker();
   renderCategoryNavigation();
+  renderSavedBriefings();
 
   if (!state.articles.length) {
     updatedLabel.textContent = text.loading;
@@ -1555,6 +1707,7 @@ function renderArticles() {
   feedLabel.textContent = `${articles.length} ${currentText().sourcedStories}`;
   renderCategoryNavigation();
   renderBreakingNews(articles);
+  renderSavedBriefings();
   renderMyNews();
   renderSavedStories();
   renderContinueReading();
@@ -1800,6 +1953,7 @@ continueReadingClear?.addEventListener("click", () => {
   renderContinueReading();
   showToast(currentText().clearHistory);
 });
+saveBriefingButton?.addEventListener("click", saveCurrentBriefing);
 breakingPrev?.addEventListener("click", () => {
   previousBreakingStory();
   startBreakingRotation();
@@ -1834,6 +1988,7 @@ document.querySelector(".newsletter-form")?.addEventListener("submit", (event) =
 });
 
 initTheme();
+renderSavedBriefings();
 renderMyNews();
 renderSavedStories();
 renderContinueReading();

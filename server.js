@@ -1009,7 +1009,7 @@ function handleNotFound(request, response) {
   <meta name="robots" content="noindex, follow">
   <title>Page not found | ${htmlEscape(SITE_NAME)}</title>
   <link rel="canonical" href="${htmlEscape(baseUrl)}/404.html">
-  <link rel="stylesheet" href="/styles.css?v=seo-1">
+  <link rel="stylesheet" href="/styles.css?v=saved-2">
 </head>
 <body>
   <main class="static-page">
