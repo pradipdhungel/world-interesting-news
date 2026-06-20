@@ -121,6 +121,17 @@ function initTheme() {
   setTheme(stored || (prefersDark ? "dark" : "light"));
 }
 
+async function initAds() {
+  if (!window.WorldNewsAds) return;
+  try {
+    const response = await fetch("/api/meta");
+    const meta = await response.json();
+    WorldNewsAds.initAds(meta.publicConfig || {});
+  } catch {
+    WorldNewsAds.initAds({});
+  }
+}
+
 function renderMissing() {
   title.textContent = "Story not found";
   summary.textContent = "Please return to the news list and open the story again.";
@@ -367,6 +378,7 @@ themeToggle?.addEventListener("click", () => {
 });
 
 initTheme();
+initAds();
 
 if (article) {
   renderArticle();

@@ -20,7 +20,16 @@ const publicConfig = {
   googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
   googleTagManagerId: process.env.GOOGLE_TAG_MANAGER_ID || "",
   googleSearchConsoleVerification: process.env.GOOGLE_SEARCH_CONSOLE_VERIFICATION || "",
-  microsoftClarityId: process.env.MICROSOFT_CLARITY_ID || ""
+  microsoftClarityId: process.env.MICROSOFT_CLARITY_ID || "",
+  googleAdsenseClient: process.env.GOOGLE_ADSENSE_CLIENT || "",
+  adSlots: {
+    homeTop: process.env.AD_SLOT_HOME_TOP || "",
+    feedInline: process.env.AD_SLOT_FEED_INLINE || "",
+    sidebar: process.env.AD_SLOT_SIDEBAR || "",
+    articleInline: process.env.AD_SLOT_ARTICLE_INLINE || "",
+    articleSidebar: process.env.AD_SLOT_ARTICLE_SIDEBAR || "",
+    footer: process.env.AD_SLOT_FOOTER || ""
+  }
 };
 
 function loadVisitStats() {

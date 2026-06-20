@@ -2632,10 +2632,34 @@ h1 {
 .ad-block {
   min-height: 240px;
   padding: 18px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
   background:
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--line) 38%, transparent) 0 1px, transparent 1px 12px),
     linear-gradient(135deg, color-mix(in srgb, var(--soft) 75%, transparent), transparent),
     var(--surface);
   color: var(--muted);
+}
+
+.ad-block[data-ad-status="live"] {
+  display: block;
+  place-content: initial;
+  min-height: 120px;
+  padding: 10px;
+  background: var(--surface);
+}
+
+.ad-block-wide {
+  min-height: 112px;
+  margin: 18px 0;
+}
+
+.ad-block-feed,
+.ad-block-article {
+  min-height: 120px;
+  margin: 16px 0 18px;
 }
 
 .ad-block span {
@@ -2647,8 +2671,16 @@ h1 {
 
 .ad-block strong {
   display: block;
-  margin-top: 10px;
+  margin-top: 0;
   color: var(--ink);
+  font-size: 18px;
+}
+
+.ad-block p {
+  max-width: 280px;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .newsletter {

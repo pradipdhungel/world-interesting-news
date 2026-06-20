@@ -2104,6 +2104,9 @@ async function loadMeta() {
   if (window.NewsSeo) {
     NewsSeo.injectAnalytics(meta.publicConfig || {});
   }
+  if (window.WorldNewsAds) {
+    WorldNewsAds.initAds(meta.publicConfig || {});
+  }
 
   countrySelect.innerHTML = "";
   state.countries.forEach((country) => {
