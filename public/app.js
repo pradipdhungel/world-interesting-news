@@ -10,6 +10,8 @@ const state = {
   liveRefreshTimer: null,
   fifaTimer: null,
   fifaCaptains: {},
+  fifaChartMode: "standings",
+  fifaTeamPayload: null,
   shorts: [],
   shortIndex: 0,
   shortPlaying: true,
@@ -84,6 +86,8 @@ const fifaStatus = document.querySelector("#fifa-status");
 const fifaScoreGrid = document.querySelector("#fifa-score-grid");
 const fifaChartMeta = document.querySelector("#fifa-chart-meta");
 const fifaTeamChart = document.querySelector("#fifa-team-chart");
+const fifaStandingsView = document.querySelector("#fifa-standings-view");
+const fifaWallView = document.querySelector("#fifa-wall-view");
 const fifaRefresh = document.querySelector("#fifa-refresh");
 const fifaSource = document.querySelector("#fifa-source");
 const pageTitle = document.querySelector("#page-title");
@@ -1244,19 +1248,102 @@ function renderFifaTeamRow(team, maxPoints) {
   `;
 }
 
+function renderWallGroup(group) {
+  return `
+    <section class="wall-group">
+      <div class="wall-group-title">
+        <strong>${escapeHtml(group.name)}</strong>
+        <span>Pts</span>
+      </div>
+      ${group.teams.map((team) => {
+        const eliminated = /eliminated/i.test(team.note || "");
+        return `
+          <div class="wall-team${eliminated ? " is-eliminated" : ""}">
+            <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
+            <span>${escapeHtml(team.abbreviation || team.shortName || team.name)}</span>
+            <strong>${team.points}</strong>
+          </div>
+        `;
+      }).join("")}
+    </section>
+  `;
+}
+
+function wallSeedName(groups, index) {
+  const teams = groups.flatMap((group) => group.teams || []);
+  const team = teams[index];
+  if (!team) return "TBD";
+  return team.abbreviation || team.shortName || team.name || "TBD";
+}
+
+function renderBracketColumn(title, count, groups, offset = 0) {
+  return `
+    <div class="wall-round">
+      <h5>${title}</h5>
+      ${Array.from({ length: count }, (_, index) => `
+        <div class="wall-match">
+          <span>${escapeHtml(wallSeedName(groups, offset + index * 2))}</span>
+          <span>${escapeHtml(wallSeedName(groups, offset + index * 2 + 1))}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderFifaWallChart(groups) {
+  const leftGroups = groups.slice(0, Math.ceil(groups.length / 2));
+  const rightGroups = groups.slice(Math.ceil(groups.length / 2));
+  fifaTeamChart.className = "fifa-wall-chart";
+  fifaTeamChart.innerHTML = `
+    <div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>
+    <div class="wall-center">
+      <div class="wall-trophy">
+        <span>FIFA</span>
+        <strong>World Cup</strong>
+        <small>Wall Chart</small>
+      </div>
+      <div class="wall-bracket">
+        ${renderBracketColumn("Round of 32", 4, groups, 0)}
+        ${renderBracketColumn("Round of 16", 2, groups, 8)}
+        <div class="wall-final-path">
+          <div class="wall-stage">Quarter-finals</div>
+          <div class="wall-stage">Semi-finals</div>
+          <div class="wall-final-box">
+            <span>Final</span>
+            <strong>Winner TBD</strong>
+          </div>
+          <div class="wall-stage">Third place</div>
+        </div>
+        ${renderBracketColumn("Round of 16", 2, groups, 12)}
+        ${renderBracketColumn("Round of 32", 4, groups, 16)}
+      </div>
+    </div>
+    <div class="wall-side wall-right">${rightGroups.map(renderWallGroup).join("")}</div>
+  `;
+}
+
 function renderFifaTeams(payload) {
   if (!fifaTeamChart || !fifaChartMeta) return;
   const groups = payload.groups || [];
   fifaTeamChart.innerHTML = "";
+  state.fifaTeamPayload = payload;
   fifaChartMeta.textContent = groups.length
     ? `${payload.totalTeams || 0} country teams | ${fifaUpdatedLabel(payload)}`
     : "No World Cup team standings are available right now.";
+  fifaStandingsView?.classList.toggle("is-active", state.fifaChartMode === "standings");
+  fifaWallView?.classList.toggle("is-active", state.fifaChartMode === "wall");
 
   if (!groups.length) {
     fifaTeamChart.innerHTML = `<div class="fifa-empty">World Cup team chart is unavailable right now. Check back soon.</div>`;
     return;
   }
 
+  if (state.fifaChartMode === "wall") {
+    renderFifaWallChart(groups);
+    return;
+  }
+
+  fifaTeamChart.className = "fifa-team-chart";
   groups.forEach((group) => {
     const maxPoints = Math.max(...group.teams.map((team) => team.points || 0), 0);
     const section = document.createElement("section");
@@ -2160,6 +2247,14 @@ savedStoriesClear?.addEventListener("click", () => {
 });
 fifaRefresh?.addEventListener("click", loadFifaScores);
 fifaRefresh?.addEventListener("click", loadFifaTeams);
+fifaStandingsView?.addEventListener("click", () => {
+  state.fifaChartMode = "standings";
+  if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
+});
+fifaWallView?.addEventListener("click", () => {
+  state.fifaChartMode = "wall";
+  if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
+});
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
   renderContinueReading();

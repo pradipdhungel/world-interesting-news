@@ -1398,6 +1398,38 @@ h1 {
   text-align: right;
 }
 
+.fifa-chart-tools {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.fifa-chart-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-raised) 84%, transparent);
+}
+
+.fifa-chart-toggle button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fifa-chart-toggle button.is-active {
+  background: var(--accent);
+  color: white;
+}
+
 .fifa-team-chart {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1583,6 +1615,186 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
+}
+
+.fifa-wall-chart {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(520px, 1.8fr) minmax(210px, 0.8fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 32%),
+    linear-gradient(135deg, #1f7a4d 0 18%, #3f1a78 18% 34%, #d71920 34% 68%, #d9e6f5 68% 100%);
+  box-shadow: var(--soft-shadow);
+}
+
+.wall-side {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.wall-group {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.78);
+  color: white;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
+}
+
+.wall-group-title,
+.wall-team {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 8px;
+  align-items: center;
+}
+
+.wall-group-title {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.wall-team {
+  grid-template-columns: 24px minmax(0, 1fr) 26px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wall-team img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+}
+
+.wall-team span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wall-team.is-eliminated {
+  background: rgba(239, 68, 68, 0.58);
+  box-shadow: inset 4px 0 0 #ef4444;
+}
+
+.wall-center {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wall-trophy {
+  justify-self: center;
+  min-width: 160px;
+  padding: 12px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.54);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.88);
+  color: white;
+  text-align: center;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.28);
+}
+
+.wall-trophy span,
+.wall-trophy small {
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wall-trophy strong {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.wall-bracket {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.wall-round {
+  display: grid;
+  gap: 10px;
+}
+
+.wall-round h5 {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: white;
+  font-size: 11px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.wall-match,
+.wall-stage,
+.wall-final-box {
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #111827;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+}
+
+.wall-match {
+  display: grid;
+  overflow: hidden;
+  min-height: 46px;
+}
+
+.wall-match span {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.wall-match span:last-child {
+  border-bottom: 0;
+}
+
+.wall-final-path {
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+
+.wall-stage,
+.wall-final-box {
+  padding: 10px;
+  font-size: 12px;
+  font-weight: 950;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.wall-final-box {
+  border: 2px solid #facc15;
+  background: #111827;
+  color: white;
+}
+
+.wall-final-box span,
+.wall-final-box strong {
+  display: block;
 }
 
 .fifa-card,
@@ -3156,6 +3368,15 @@ h1 {
 
   .fifa-chart-head p {
     text-align: left;
+  }
+
+  .fifa-chart-tools {
+    justify-items: start;
+  }
+
+  .fifa-wall-chart {
+    grid-template-columns: 220px 620px 220px;
+    overflow-x: auto;
   }
 
   .news-grid,
