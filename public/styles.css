@@ -1623,6 +1623,100 @@ h1 {
   text-align: right;
 }
 
+.fifa-captains {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--accent) 18%, transparent), transparent 38%),
+    color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.fifa-captains-title,
+.fifa-captain-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fifa-captains-title span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fifa-captains-title small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.fifa-captain-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fifa-captain-card {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.fifa-captain-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.fifa-captain-card img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  object-fit: cover;
+  background: white;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.fifa-captain-card.is-fallback img {
+  object-fit: contain;
+  padding: 6px;
+  opacity: 0.9;
+}
+
+.fifa-captain-card span {
+  display: grid;
+  min-width: 0;
+}
+
+.fifa-captain-card small,
+.fifa-captain-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fifa-captain-card small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fifa-captain-card strong {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .fifa-card-bottom {
   align-items: start;
   padding-top: 4px;
@@ -3083,6 +3177,10 @@ h1 {
 
   .saved-briefing-actions {
     flex-direction: column;
+  }
+
+  .fifa-captain-grid {
+    grid-template-columns: 1fr;
   }
 
   .ticker {

@@ -9,6 +9,7 @@ const state = {
   breakingTimer: null,
   liveRefreshTimer: null,
   fifaTimer: null,
+  fifaCaptains: {},
   shorts: [],
   shortIndex: 0,
   shortPlaying: true,
@@ -1058,6 +1059,46 @@ function renderTeam(team, side) {
   `;
 }
 
+function captainForTeam(team) {
+  if (!team) return null;
+  const captains = state.fifaCaptains || {};
+  return captains[team.abbreviation] || captains[team.name] || captains[team.shortName] || null;
+}
+
+function renderCaptainCard(team) {
+  const captain = captainForTeam(team);
+  const hasPhoto = captain?.image;
+  const captainName = captain?.name || "Awaiting photo";
+  const image = hasPhoto ? captain.image : team.logo || "/favicon.svg";
+  const alt = hasPhoto ? `${captain.name} captain of ${team.name}` : "";
+
+  return `
+    <div class="fifa-captain-card${hasPhoto ? "" : " is-fallback"}">
+      <img src="${image}" alt="${escapeHtml(alt)}" loading="lazy">
+      <span>
+        <small>${escapeHtml(team.shortName || team.name)}</small>
+        <strong>${escapeHtml(captainName)}</strong>
+      </span>
+    </div>
+  `;
+}
+
+function renderCaptainSpotlight(match) {
+  if (!match.live) return "";
+  return `
+    <div class="fifa-captains" aria-label="Live match captain spotlight">
+      <div class="fifa-captains-title">
+        <span>Captain spotlight</span>
+        <small>Live match</small>
+      </div>
+      <div class="fifa-captain-grid">
+        ${renderCaptainCard(match.home)}
+        ${renderCaptainCard(match.away)}
+      </div>
+    </div>
+  `;
+}
+
 function renderFifaScores(payload) {
   if (!fifaScoreGrid || !fifaStatus) return;
   fifaScoreGrid.innerHTML = "";
@@ -1088,6 +1129,7 @@ function renderFifaScores(payload) {
       </div>
       ${renderTeam(match.home, "home")}
       ${renderTeam(match.away, "away")}
+      ${renderCaptainSpotlight(match)}
       <div class="fifa-card-bottom">
         <span>${match.venue || "Venue TBA"}</span>
         <span>${match.broadcasts?.join(", ") || match.statusLabel || ""}</span>
@@ -1095,6 +1137,17 @@ function renderFifaScores(payload) {
     `;
     fifaScoreGrid.appendChild(card);
   });
+}
+
+async function loadFifaCaptains() {
+  try {
+    const response = await fetch("/data/fifa-captains.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("Captain data unavailable");
+    const captains = await response.json();
+    state.fifaCaptains = captains && typeof captains === "object" ? captains : {};
+  } catch {
+    state.fifaCaptains = {};
+  }
 }
 
 function fifaUpdatedLabel(payload) {
@@ -2097,5 +2150,5 @@ function startLiveNewsRefresh() {
 
 loadMeta().then(() => Promise.all([
   loadNews().then(startLiveNewsRefresh),
-  Promise.all([loadFifaScores(), loadFifaTeams()]).then(startFifaScoreRefresh)
+  loadFifaCaptains().then(() => Promise.all([loadFifaScores(), loadFifaTeams()])).then(startFifaScoreRefresh)
 ]));
