@@ -12,6 +12,7 @@ const state = {
   fifaCaptains: {},
   fifaChartMode: "standings",
   fifaTeamPayload: null,
+  calendarDate: new Date(),
   shorts: [],
   shortIndex: 0,
   shortPlaying: true,
@@ -1387,9 +1388,111 @@ function holidayDateLabel(value) {
   return date.toLocaleDateString([], { month: "short", day: "numeric", weekday: "short" });
 }
 
+function calendarMonthLabel(date, payload) {
+  const gregorian = date.toLocaleDateString([], { month: "long", year: "numeric" });
+  if (payload.countryCode === "np") {
+    return `${gregorian} | Nepal calendar`;
+  }
+  return gregorian;
+}
+
+function calendarHolidayMap(payload) {
+  const map = new Map();
+  (payload.allHolidays || payload.holidays || []).forEach((holiday) => {
+    if (!map.has(holiday.date)) map.set(holiday.date, []);
+    map.get(holiday.date).push(holiday);
+  });
+  return map;
+}
+
+function sameCalendarDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function isoLocalDate(date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function renderMonthGrid(payload) {
+  const viewDate = state.calendarDate;
+  const first = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  const today = new Date(`${payload.isoDate || isoLocalDate(new Date())}T00:00:00`);
+  const holidayMap = calendarHolidayMap(payload);
+  const days = [];
+
+  for (let index = 0; index < 42; index += 1) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    const iso = isoLocalDate(day);
+    const events = holidayMap.get(iso) || [];
+    days.push(`
+      <article class="month-day${day.getMonth() !== viewDate.getMonth() ? " is-muted" : ""}${sameCalendarDay(day, today) ? " is-today" : ""}${events.length ? " has-event" : ""}">
+        <span>${day.toLocaleDateString([], { weekday: "short" })}</span>
+        <strong>${day.getDate()}</strong>
+        ${events.slice(0, 2).map((event) => `<small>${escapeHtml(event.localName || event.name)}</small>`).join("")}
+      </article>
+    `);
+  }
+
+  return `
+    <div class="month-weekdays">
+      ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => `<span>${day}</span>`).join("")}
+    </div>
+    <div class="month-grid">${days.join("")}</div>
+  `;
+}
+
+function renderHolidayAgenda(payload) {
+  const holidays = payload.holidays || [];
+  if (!holidays.length) {
+    return `
+      <div class="calendar-side-empty">
+        <strong>${payload.countryCode === "world" ? "Select a country" : "No holiday data"}</strong>
+        <p>${escapeHtml(payload.warning || "Upcoming holidays will appear here when available.")}</p>
+      </div>
+    `;
+  }
+
+  return holidays.slice(0, 6).map((holiday) => `
+    <article class="agenda-item">
+      <time datetime="${holiday.date}">${escapeHtml(holidayDateLabel(holiday.date))}</time>
+      <strong>${escapeHtml(holiday.localName || holiday.name)}</strong>
+      <small>${escapeHtml(holiday.name || holiday.localName)}</small>
+    </article>
+  `).join("");
+}
+
+function renderCalendarTopics(payload) {
+  const country = payload.country || "World";
+  return `
+    <article class="calendar-note-card">
+      <span>Following</span>
+      <strong>${escapeHtml(country)}</strong>
+      <p>This calendar follows the country selected in the news filter.</p>
+    </article>
+    <article class="calendar-note-card">
+      <span>Local date</span>
+      <strong>${escapeHtml(payload.localDate || payload.isoDate || "Today")}</strong>
+      <p>Dates are shown in a local-friendly format for the selected country.</p>
+    </article>
+    <article class="calendar-note-card">
+      <span>Tip</span>
+      <strong>Plan news around holidays</strong>
+      <p>Holiday periods can explain local business, school, sports, and traffic patterns.</p>
+    </article>
+  `;
+}
+
 function renderCountryCalendar(payload) {
   if (!calendarTitle || !calendarSummary || !calendarStatus || !calendarGrid) return;
   const holidays = payload.holidays || [];
+  if (!state.calendarDate || Number.isNaN(state.calendarDate.getTime())) {
+    state.calendarDate = new Date(`${payload.isoDate || isoLocalDate(new Date())}T00:00:00`);
+  }
   calendarTitle.textContent = payload.countryCode === "world"
     ? "World calendar"
     : `${payload.country} calendar`;
@@ -1401,34 +1504,41 @@ function renderCountryCalendar(payload) {
     : `${holidays.length ? holidays.length : "No"} upcoming holidays | ${payload.source || "Local calendar"}`;
 
   calendarGrid.innerHTML = `
-    <article class="calendar-card calendar-today">
-      <span>Today</span>
-      <strong>${escapeHtml(payload.localDate || payload.isoDate || "Today")}</strong>
-      <small>${escapeHtml(payload.country || "World")}</small>
-    </article>
+    <aside class="calendar-side calendar-agenda">
+      <div class="calendar-panel-title">
+        <span>Upcoming holidays</span>
+      </div>
+      ${renderHolidayAgenda(payload)}
+    </aside>
+    <section class="calendar-main">
+      <div class="calendar-toolbar">
+        <button type="button" class="calendar-nav" data-calendar-action="today">Today</button>
+        <button type="button" class="calendar-nav" data-calendar-action="prev" aria-label="Previous month">‹</button>
+        <strong>${escapeHtml(calendarMonthLabel(state.calendarDate, payload))}</strong>
+        <button type="button" class="calendar-nav" data-calendar-action="next" aria-label="Next month">›</button>
+      </div>
+      ${renderMonthGrid(payload)}
+    </section>
+    <aside class="calendar-side calendar-notes">
+      <div class="calendar-panel-title">
+        <span>Country notes</span>
+      </div>
+      ${renderCalendarTopics(payload)}
+    </aside>
   `;
 
-  if (!holidays.length) {
-    const empty = document.createElement("article");
-    empty.className = "calendar-card calendar-empty";
-    empty.innerHTML = `
-      <span>Holidays</span>
-      <strong>${payload.countryCode === "world" ? "Pick a country" : "No upcoming holidays found"}</strong>
-      <small>${escapeHtml(payload.warning || "Calendar data will appear when available.")}</small>
-    `;
-    calendarGrid.appendChild(empty);
-    return;
-  }
-
-  holidays.forEach((holiday) => {
-    const card = document.createElement("article");
-    card.className = "calendar-card holiday-card";
-    card.innerHTML = `
-      <span>${escapeHtml(holidayDateLabel(holiday.date))}</span>
-      <strong>${escapeHtml(holiday.localName || holiday.name)}</strong>
-      <small>${escapeHtml(holiday.name || holiday.localName)}${holiday.types?.length ? ` | ${escapeHtml(holiday.types.join(", "))}` : ""}</small>
-    `;
-    calendarGrid.appendChild(card);
+  calendarGrid.querySelectorAll("[data-calendar-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.calendarAction;
+      if (action === "today") {
+        state.calendarDate = new Date(`${payload.isoDate || isoLocalDate(new Date())}T00:00:00`);
+      } else if (action === "prev") {
+        state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() - 1, 1);
+      } else if (action === "next") {
+        state.calendarDate = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth() + 1, 1);
+      }
+      renderCountryCalendar(payload);
+    });
   });
 }
 
@@ -2230,6 +2340,7 @@ async function loadMeta() {
 countrySelect.addEventListener("change", () => {
   updateCountryButton();
   renderMyNews();
+  state.calendarDate = new Date();
   loadCountryCalendar();
   updateUrlState();
   loadNews();

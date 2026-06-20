@@ -984,48 +984,183 @@ h1 {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 1.1fr) repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(210px, 0.75fr) minmax(520px, 1.7fr) minmax(210px, 0.75fr);
+  gap: 16px;
+  align-items: start;
 }
 
-.calendar-card {
-  display: grid;
-  gap: 8px;
-  min-height: 126px;
-  padding: 16px;
+.calendar-side,
+.calendar-main {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
   box-shadow: var(--soft-shadow);
 }
 
-.calendar-card span {
+.calendar-side {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.calendar-panel-title {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.calendar-panel-title span {
   color: var(--accent);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.agenda-item,
+.calendar-note-card,
+.calendar-side-empty {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.agenda-item time,
+.calendar-note-card span {
+  color: var(--accent-strong);
   font-size: 11px;
   font-weight: 950;
   text-transform: uppercase;
 }
 
-.calendar-card strong {
+.agenda-item strong,
+.calendar-note-card strong,
+.calendar-side-empty strong {
   color: var(--ink);
-  font-size: 18px;
-  line-height: 1.18;
+  font-size: 15px;
+  line-height: 1.25;
 }
 
-.calendar-card small {
+.agenda-item small,
+.calendar-note-card p,
+.calendar-side-empty p {
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1.4;
 }
 
-.calendar-today {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--teal) 14%, var(--surface-raised)), var(--surface-raised));
+.calendar-main {
+  overflow: hidden;
 }
 
-.calendar-empty {
-  grid-column: span 2;
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.calendar-toolbar strong {
+  color: var(--accent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(19px, 2.5vw, 28px);
+  text-align: center;
+}
+
+.calendar-nav {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.calendar-nav:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.month-weekdays,
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.month-weekdays span {
+  padding: 10px 6px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.month-weekdays span:last-child,
+.month-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.month-day {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-height: 112px;
+  padding: 9px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+}
+
+.month-day span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.month-day strong {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.month-day small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.month-day.is-muted {
+  opacity: 0.42;
+}
+
+.month-day.is-today {
+  background: color-mix(in srgb, var(--teal) 14%, var(--surface-raised));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--teal) 55%, transparent);
+}
+
+.month-day.has-event {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+}
+
+.month-day.has-event strong {
+  color: var(--accent);
 }
 
 .homepage-layout {
@@ -3514,12 +3649,24 @@ h1 {
     overflow-x: auto;
   }
 
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-main {
+    overflow-x: auto;
+  }
+
+  .month-weekdays,
+  .month-grid {
+    min-width: 720px;
+  }
+
   .news-grid,
   .my-news-grid,
   .saved-briefings-grid,
   .saved-grid,
   .continue-grid,
-  .calendar-grid,
   .fifa-score-grid,
   .fifa-team-chart,
   .category-sections,
@@ -3588,8 +3735,13 @@ h1 {
     flex-direction: column;
   }
 
-  .calendar-empty {
-    grid-column: auto;
+  .calendar-toolbar {
+    grid-template-columns: auto auto auto;
+  }
+
+  .calendar-toolbar strong {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .fifa-captain-grid {

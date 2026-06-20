@@ -750,8 +750,10 @@ async function handleCountryCalendar(request, response, url) {
       headers: { "User-Agent": `${SITE_NAME}/1.0` }
     });
     if (!holidayResponse.ok) throw new Error(`Holiday calendar responded ${holidayResponse.status}`);
-    const holidays = (await holidayResponse.json())
+    const allHolidays = (await holidayResponse.json())
       .map(normalizeHoliday)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const holidays = allHolidays
       .filter((holiday) => holiday.date >= dateInfo.isoDate)
       .slice(0, 8);
     const payload = {
@@ -759,6 +761,7 @@ async function handleCountryCalendar(request, response, url) {
       countryCode: countryInfo.flagCode,
       ...dateInfo,
       holidays,
+      allHolidays,
       source: "Nager.Date public holiday data",
       updatedAt: new Date().toISOString()
     };
