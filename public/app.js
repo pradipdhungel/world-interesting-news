@@ -1069,23 +1069,72 @@ function generatedCaptainName(team) {
   return `${team.shortName || team.name || "Team"} Captain`;
 }
 
+function teamJerseyColors(team) {
+  const palettes = {
+    ARG: ["#75aadb", "#ffffff", "#f6c544"],
+    AUS: ["#0a6b44", "#ffcd00", "#ffffff"],
+    BRA: ["#f7dd2d", "#129447", "#174ea6"],
+    CAN: ["#d80621", "#ffffff", "#111827"],
+    ENG: ["#ffffff", "#c8102e", "#172554"],
+    FRA: ["#1d3f8f", "#ffffff", "#d0182d"],
+    GER: ["#ffffff", "#111827", "#d4af37"],
+    HAI: ["#0f4caa", "#d21034", "#ffffff"],
+    JPN: ["#174ea6", "#ffffff", "#e6002d"],
+    MAR: ["#c1272d", "#006233", "#ffffff"],
+    MEX: ["#006847", "#ce1126", "#ffffff"],
+    SCO: ["#005eb8", "#ffffff", "#111827"],
+    TUR: ["#e30a17", "#ffffff", "#111827"],
+    USA: ["#1f3c88", "#c8102e", "#ffffff"]
+  };
+  return palettes[team.abbreviation] || ["#1d4ed8", "#ef4444", "#ffffff"];
+}
+
+function renderGeneratedJersey(team, captainName) {
+  const abbreviation = escapeHtml(team.abbreviation || (team.shortName || team.name || "FC").slice(0, 3).toUpperCase());
+  const [primary, secondary, trim] = teamJerseyColors(team);
+  const label = escapeHtml(`Generated ${captainName} jersey`);
+  return `
+    <svg class="fifa-captain-jersey" viewBox="0 0 92 92" role="img" aria-label="${label}" focusable="false">
+      <defs>
+        <linearGradient id="jersey-main-${abbreviation}" x1="10%" x2="92%" y1="6%" y2="92%">
+          <stop offset="0%" stop-color="${trim}" stop-opacity="0.92"></stop>
+          <stop offset="22%" stop-color="${primary}"></stop>
+          <stop offset="100%" stop-color="${secondary}"></stop>
+        </linearGradient>
+        <linearGradient id="jersey-shine-${abbreviation}" x1="0%" x2="100%" y1="0%" y2="100%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"></stop>
+          <stop offset="38%" stop-color="#ffffff" stop-opacity="0.08"></stop>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0.18"></stop>
+        </linearGradient>
+        <filter id="jersey-shadow-${abbreviation}" x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#020617" flood-opacity="0.32"></feDropShadow>
+        </filter>
+      </defs>
+      <path filter="url(#jersey-shadow-${abbreviation})" d="M29 10h34l10 7 12 8-10 22-10-5v36c0 4-3 7-7 7H34c-4 0-7-3-7-7V42l-10 5L7 25l12-8 10-7Z" fill="url(#jersey-main-${abbreviation})"></path>
+      <path d="M31 10c3 9 8 14 15 14s12-5 15-14" fill="none" stroke="${trim}" stroke-width="6" stroke-linecap="round"></path>
+      <path d="M28 15l-9 7 8 15M64 15l9 7-8 15" fill="none" stroke="${trim}" stroke-opacity="0.72" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M34 28c6 4 18 4 24 0M35 47h22M36 61h20" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="3" stroke-linecap="round"></path>
+      <path d="M27 18c8 7 14 17 17 31 2 12 1 23-3 34H34c-4 0-7-3-7-7V42l-10 5L7 25l12-8 10-7-2 8Z" fill="url(#jersey-shine-${abbreviation})" opacity="0.82"></path>
+      <rect x="55" y="37" width="24" height="15" rx="7.5" fill="${trim}" stroke="#ffffff" stroke-opacity="0.7"></rect>
+      <text x="67" y="48" text-anchor="middle" fill="${secondary}" font-size="11" font-weight="900" font-family="Arial, sans-serif">C</text>
+      <circle cx="46" cy="47" r="15" fill="#ffffff" opacity="0.18"></circle>
+      <text x="46" y="51" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="900" font-family="Arial, sans-serif">${abbreviation}</text>
+    </svg>
+  `;
+}
+
 function renderCaptainCard(team) {
   const captain = captainForTeam(team);
   const hasPhoto = captain?.image;
   const captainName = captain?.name || generatedCaptainName(team);
   const image = captain?.image || "";
   const alt = hasPhoto ? `${captain.name} captain of ${team.name}` : "";
-  const abbreviation = team.abbreviation || (team.shortName || team.name || "FC").slice(0, 3).toUpperCase();
 
   return `
     <div class="fifa-captain-card${hasPhoto ? "" : " is-fallback"}">
       ${hasPhoto
         ? `<img src="${image}" alt="${escapeHtml(alt)}" loading="lazy">`
-        : `<div class="fifa-captain-jersey" role="img" aria-label="Generated ${escapeHtml(captainName)} jersey">
-            <span class="jersey-neck"></span>
-            <span class="jersey-badge">${escapeHtml(abbreviation)}</span>
-            <span class="jersey-band">C</span>
-          </div>`}
+        : renderGeneratedJersey(team, captainName)}
       <span>
         <small>${escapeHtml(team.shortName || team.name)}</small>
         <strong>${escapeHtml(captainName)}</strong>
