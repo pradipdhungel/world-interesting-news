@@ -12,7 +12,9 @@ const STATS_FILE = path.join(__dirname, "visit-stats.json");
 let latestArticles = [];
 let visitStats = loadVisitStats();
 let fifaScoreCache = { updatedAt: 0, payload: null };
+let fifaTeamCache = { updatedAt: 0, payload: null };
 const FIFA_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const FIFA_STANDINGS_URL = "https://site.web.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?region=us&lang=en&contentorigin=espn";
 
 const publicConfig = {
   googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
@@ -513,6 +515,47 @@ function normalizeFifaEvent(event) {
   };
 }
 
+function statValue(stats, names, fallback = 0) {
+  const match = (stats || []).find((stat) => names.includes(stat.name) || names.includes(stat.type));
+  if (!match) return fallback;
+  if (match.displayValue !== undefined && match.displayValue !== "") return match.displayValue;
+  return match.value !== undefined ? match.value : fallback;
+}
+
+function statNumber(stats, names, fallback = 0) {
+  const value = statValue(stats, names, fallback);
+  const number = Number(String(value).replace(/^\+/, ""));
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeFifaStanding(entry, groupName) {
+  const team = entry.team || {};
+  const stats = entry.stats || [];
+  const logo = team.logos?.find((item) => item.rel?.includes("default"))?.href || team.logos?.[0]?.href || "";
+  const link = team.links?.find((item) => item.rel?.includes("team"))?.href || team.links?.[0]?.href || "";
+
+  return {
+    id: team.id || team.uid || `${groupName}-${team.abbreviation || team.displayName}`,
+    group: groupName,
+    rank: statNumber(stats, ["rank"], 0),
+    name: team.displayName || team.shortDisplayName || team.name || "TBD",
+    shortName: team.shortDisplayName || team.name || team.displayName || "TBD",
+    abbreviation: team.abbreviation || "",
+    logo,
+    link,
+    played: statNumber(stats, ["gamesPlayed", "gamesplayed"], 0),
+    wins: statNumber(stats, ["wins"], 0),
+    draws: statNumber(stats, ["ties"], 0),
+    losses: statNumber(stats, ["losses"], 0),
+    goalsFor: statNumber(stats, ["pointsFor", "pointsfor"], 0),
+    goalsAgainst: statNumber(stats, ["pointsAgainst", "pointsagainst"], 0),
+    goalDifference: statValue(stats, ["pointDifferential", "pointdifferential"], 0),
+    points: statNumber(stats, ["points"], 0),
+    record: statValue(stats, ["overall", "total"], ""),
+    note: entry.note?.description || ""
+  };
+}
+
 async function handleFifaScores(request, response) {
   if (request.method !== "GET") {
     sendJson(response, 405, { error: "Use GET for FIFA scores." });
@@ -556,6 +599,65 @@ async function handleFifaScores(request, response) {
       error: "FIFA scores unavailable",
       detail: error.message,
       matches: [],
+      updatedAt: new Date().toISOString()
+    });
+  }
+}
+
+async function handleFifaTeams(request, response) {
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Use GET for FIFA teams." });
+    return;
+  }
+
+  const now = Date.now();
+  if (fifaTeamCache.payload && now - fifaTeamCache.updatedAt < 10 * 60 * 1000) {
+    sendJson(response, 200, { ...fifaTeamCache.payload, cached: true });
+    return;
+  }
+
+  try {
+    const standingsResponse = await fetch(FIFA_STANDINGS_URL, {
+      headers: { "User-Agent": `${SITE_NAME}/1.0` }
+    });
+    if (!standingsResponse.ok) throw new Error(`Standings responded ${standingsResponse.status}`);
+    const standings = await standingsResponse.json();
+    const groups = (standings.children || [])
+      .map((child) => {
+        const teams = (child.standings?.entries || [])
+          .map((entry) => normalizeFifaStanding(entry, child.name || child.abbreviation || "Group"))
+          .sort((a, b) => (a.rank || 99) - (b.rank || 99));
+        return {
+          id: child.id || child.uid || child.name,
+          name: child.name || child.abbreviation || "Group",
+          teams
+        };
+      })
+      .filter((group) => group.teams.length);
+
+    const payload = {
+      league: standings.name || "FIFA World Cup",
+      updatedAt: new Date().toISOString(),
+      source: "ESPN",
+      sourceUrl: "https://www.espn.com/soccer/standings/_/league/fifa.world",
+      totalTeams: groups.reduce((count, group) => count + group.teams.length, 0),
+      groups
+    };
+    fifaTeamCache = { updatedAt: now, payload };
+    sendJson(response, 200, payload);
+  } catch (error) {
+    if (fifaTeamCache.payload) {
+      sendJson(response, 200, {
+        ...fifaTeamCache.payload,
+        cached: true,
+        warning: "Showing recent cached teams because live standings are temporarily unavailable."
+      });
+      return;
+    }
+    sendJson(response, 502, {
+      error: "FIFA team chart unavailable",
+      detail: error.message,
+      groups: [],
       updatedAt: new Date().toISOString()
     });
   }
@@ -1082,6 +1184,11 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/api/fifa-scores") {
     handleFifaScores(request, response);
+    return;
+  }
+
+  if (url.pathname === "/api/fifa-teams") {
+    handleFifaTeams(request, response);
     return;
   }
 

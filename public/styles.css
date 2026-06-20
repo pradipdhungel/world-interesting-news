@@ -1373,6 +1373,175 @@ h1 {
   gap: 14px;
 }
 
+.fifa-chart-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.fifa-chart-head h3 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.08;
+}
+
+.fifa-chart-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  text-align: right;
+}
+
+.fifa-team-chart {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.fifa-group-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--soft-shadow);
+}
+
+.fifa-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.fifa-group-title h4 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.fifa-group-title span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.fifa-standings-wrap {
+  overflow-x: auto;
+}
+
+.fifa-standings {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+}
+
+.fifa-standings th,
+.fifa-standings td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 13px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.fifa-standings th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fifa-standings tbody tr:hover {
+  background: color-mix(in srgb, var(--teal) 7%, transparent);
+}
+
+.fifa-rank {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.fifa-country-cell {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 180px;
+  text-align: left;
+}
+
+.fifa-country-cell img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.16);
+}
+
+.fifa-country-cell span {
+  display: grid;
+  min-width: 0;
+}
+
+.fifa-country-cell strong,
+.fifa-country-cell small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fifa-country-cell small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.fifa-points {
+  min-width: 92px;
+}
+
+.fifa-points strong {
+  display: inline-block;
+  min-width: 18px;
+  margin-right: 8px;
+  color: var(--accent-strong);
+  font-size: 16px;
+}
+
+.fifa-points span {
+  display: inline-flex;
+  width: 52px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--soft);
+  vertical-align: middle;
+}
+
+.fifa-points i {
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--teal), var(--accent));
+}
+
+.fifa-group-note {
+  margin: 0;
+  padding: 10px 14px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .fifa-card,
 .fifa-empty {
   border: 1px solid var(--line);
@@ -2832,9 +3001,15 @@ h1 {
   }
 
   .saved-briefings-header,
+  .fifa-chart-head,
   .fifa-header,
   .my-news-header {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fifa-chart-head p {
+    text-align: left;
   }
 
   .news-grid,
@@ -2843,6 +3018,7 @@ h1 {
   .saved-grid,
   .continue-grid,
   .fifa-score-grid,
+  .fifa-team-chart,
   .category-sections,
   .secondary-stories {
     grid-template-columns: 1fr;

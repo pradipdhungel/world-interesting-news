@@ -81,6 +81,8 @@ const fifaTitle = document.querySelector("#fifa-title");
 const fifaSummary = document.querySelector("#fifa-summary");
 const fifaStatus = document.querySelector("#fifa-status");
 const fifaScoreGrid = document.querySelector("#fifa-score-grid");
+const fifaChartMeta = document.querySelector("#fifa-chart-meta");
+const fifaTeamChart = document.querySelector("#fifa-team-chart");
 const fifaRefresh = document.querySelector("#fifa-refresh");
 const fifaSource = document.querySelector("#fifa-source");
 const pageTitle = document.querySelector("#page-title");
@@ -1068,7 +1070,7 @@ function renderFifaScores(payload) {
       ? `${liveCount} match${liveCount === 1 ? " is" : "es are"} live now. Scores refresh automatically.`
       : "Live, upcoming, and final FIFA matches refresh automatically.";
   }
-  fifaStatus.textContent = `Updated ${new Date(payload.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}${payload.cached ? " · cached" : ""}`;
+  fifaStatus.textContent = fifaUpdatedLabel(payload);
   if (fifaSource && payload.sourceUrl) fifaSource.href = payload.sourceUrl;
 
   if (!matches.length) {
@@ -1095,6 +1097,81 @@ function renderFifaScores(payload) {
   });
 }
 
+function fifaUpdatedLabel(payload) {
+  const time = new Date(payload.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `Updated ${time}${payload.cached ? " | cached" : ""}`;
+}
+
+function renderFifaTeamRow(team, maxPoints) {
+  const pointsPercent = maxPoints > 0 ? Math.max(8, Math.round((team.points / maxPoints) * 100)) : 8;
+  return `
+    <tr>
+      <td class="fifa-rank">${team.rank || "-"}</td>
+      <td class="fifa-country-cell">
+        <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
+        <span>
+          <strong>${escapeHtml(team.shortName || team.name)}</strong>
+          <small>${escapeHtml(team.abbreviation || team.name || "")}</small>
+        </span>
+      </td>
+      <td>${team.played}</td>
+      <td>${team.wins}</td>
+      <td>${team.draws}</td>
+      <td>${team.losses}</td>
+      <td>${escapeHtml(String(team.goalDifference))}</td>
+      <td class="fifa-points">
+        <strong>${team.points}</strong>
+        <span aria-hidden="true"><i style="width:${pointsPercent}%"></i></span>
+      </td>
+    </tr>
+  `;
+}
+
+function renderFifaTeams(payload) {
+  if (!fifaTeamChart || !fifaChartMeta) return;
+  const groups = payload.groups || [];
+  fifaTeamChart.innerHTML = "";
+  fifaChartMeta.textContent = groups.length
+    ? `${payload.totalTeams || 0} country teams | ${fifaUpdatedLabel(payload)}`
+    : "No World Cup team standings are available right now.";
+
+  if (!groups.length) {
+    fifaTeamChart.innerHTML = `<div class="fifa-empty">World Cup team chart is unavailable right now. Check back soon.</div>`;
+    return;
+  }
+
+  groups.forEach((group) => {
+    const maxPoints = Math.max(...group.teams.map((team) => team.points || 0), 0);
+    const section = document.createElement("section");
+    section.className = "fifa-group-card";
+    section.innerHTML = `
+      <div class="fifa-group-title">
+        <h4>${escapeHtml(group.name)}</h4>
+        <span>${group.teams.length} teams</span>
+      </div>
+      <div class="fifa-standings-wrap">
+        <table class="fifa-standings">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Country</th>
+              <th scope="col">P</th>
+              <th scope="col">W</th>
+              <th scope="col">D</th>
+              <th scope="col">L</th>
+              <th scope="col">GD</th>
+              <th scope="col">Pts</th>
+            </tr>
+          </thead>
+          <tbody>${group.teams.map((team) => renderFifaTeamRow(team, maxPoints)).join("")}</tbody>
+        </table>
+      </div>
+      ${group.teams.some((team) => team.note) ? `<p class="fifa-group-note">${escapeHtml(group.teams.find((team) => team.note)?.note || "")}</p>` : ""}
+    `;
+    fifaTeamChart.appendChild(section);
+  });
+}
+
 async function loadFifaScores() {
   if (!fifaScoreGrid || !fifaStatus) return;
   fifaStatus.textContent = "Refreshing FIFA scores...";
@@ -1109,10 +1186,27 @@ async function loadFifaScores() {
   }
 }
 
+async function loadFifaTeams() {
+  if (!fifaTeamChart || !fifaChartMeta) return;
+  fifaChartMeta.textContent = "Refreshing World Cup country chart...";
+  try {
+    const response = await fetch("/api/fifa-teams");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || payload.error || "Team chart unavailable");
+    renderFifaTeams(payload);
+  } catch (error) {
+    fifaChartMeta.textContent = `FIFA team chart unavailable: ${error.message}`;
+    fifaTeamChart.innerHTML = `<div class="fifa-empty">We could not load the World Cup country chart right now. Try again in a moment.</div>`;
+  }
+}
+
 function startFifaScoreRefresh() {
   if (state.fifaTimer) clearInterval(state.fifaTimer);
   state.fifaTimer = setInterval(() => {
-    if (document.visibilityState === "visible") loadFifaScores();
+    if (document.visibilityState === "visible") {
+      loadFifaScores();
+      loadFifaTeams();
+    }
   }, 60000);
 }
 
@@ -1948,6 +2042,7 @@ savedStoriesClear?.addEventListener("click", () => {
   showToast("Saved stories cleared");
 });
 fifaRefresh?.addEventListener("click", loadFifaScores);
+fifaRefresh?.addEventListener("click", loadFifaTeams);
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
   renderContinueReading();
@@ -2002,5 +2097,5 @@ function startLiveNewsRefresh() {
 
 loadMeta().then(() => Promise.all([
   loadNews().then(startLiveNewsRefresh),
-  loadFifaScores().then(startFifaScoreRefresh)
+  Promise.all([loadFifaScores(), loadFifaTeams()]).then(startFifaScoreRefresh)
 ]));
