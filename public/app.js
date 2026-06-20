@@ -1065,16 +1065,27 @@ function captainForTeam(team) {
   return captains[team.abbreviation] || captains[team.name] || captains[team.shortName] || null;
 }
 
+function generatedCaptainName(team) {
+  return `${team.shortName || team.name || "Team"} Captain`;
+}
+
 function renderCaptainCard(team) {
   const captain = captainForTeam(team);
   const hasPhoto = captain?.image;
-  const captainName = captain?.name || "Awaiting photo";
-  const image = hasPhoto ? captain.image : team.logo || "/favicon.svg";
+  const captainName = captain?.name || generatedCaptainName(team);
+  const image = captain?.image || "";
   const alt = hasPhoto ? `${captain.name} captain of ${team.name}` : "";
+  const abbreviation = team.abbreviation || (team.shortName || team.name || "FC").slice(0, 3).toUpperCase();
 
   return `
     <div class="fifa-captain-card${hasPhoto ? "" : " is-fallback"}">
-      <img src="${image}" alt="${escapeHtml(alt)}" loading="lazy">
+      ${hasPhoto
+        ? `<img src="${image}" alt="${escapeHtml(alt)}" loading="lazy">`
+        : `<div class="fifa-captain-jersey" role="img" aria-label="Generated ${escapeHtml(captainName)} jersey">
+            <span class="jersey-neck"></span>
+            <span class="jersey-badge">${escapeHtml(abbreviation)}</span>
+            <span class="jersey-band">C</span>
+          </div>`}
       <span>
         <small>${escapeHtml(team.shortName || team.name)}</small>
         <strong>${escapeHtml(captainName)}</strong>

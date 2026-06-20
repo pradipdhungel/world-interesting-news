@@ -1692,6 +1692,80 @@ h1 {
   opacity: 0.9;
 }
 
+.fifa-captain-jersey {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 15px 15px 18px 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--teal) 82%, white), color-mix(in srgb, var(--accent) 72%, black));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.18), 0 8px 18px rgba(15, 23, 42, 0.2);
+}
+
+.fifa-captain-jersey::before,
+.fifa-captain-jersey::after {
+  position: absolute;
+  top: 8px;
+  width: 16px;
+  height: 25px;
+  content: "";
+  border-radius: 10px 10px 8px 8px;
+  background: inherit;
+}
+
+.fifa-captain-jersey::before {
+  left: -8px;
+  transform: rotate(18deg);
+}
+
+.fifa-captain-jersey::after {
+  right: -8px;
+  transform: rotate(-18deg);
+}
+
+.jersey-neck {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 1;
+  width: 20px;
+  height: 12px;
+  border-radius: 0 0 999px 999px;
+  background: var(--surface-raised);
+  transform: translateX(-50%);
+}
+
+.jersey-badge {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  z-index: 2;
+  color: white;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 5px rgba(15, 23, 42, 0.34);
+  transform: translateX(-50%);
+}
+
+.jersey-band {
+  position: absolute;
+  right: -8px;
+  top: 17px;
+  z-index: 3;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: white;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+}
+
 .fifa-captain-card span {
   display: grid;
   min-width: 0;
@@ -1715,6 +1789,7 @@ h1 {
   color: var(--ink);
   font-size: 12px;
   line-height: 1.2;
+  white-space: normal;
 }
 
 .fifa-card-bottom {
