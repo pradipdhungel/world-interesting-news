@@ -926,6 +926,108 @@ h1 {
   color: var(--accent-strong);
 }
 
+.country-calendar {
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 0 12%, color-mix(in srgb, var(--gold) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 34%),
+    var(--surface);
+  box-shadow: var(--soft-shadow);
+}
+
+.country-calendar-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.country-calendar-header h2 {
+  margin: 4px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.country-calendar-header p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.calendar-refresh {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 48%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
+  color: #9a6200;
+  cursor: pointer;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.calendar-refresh:hover {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 20%, var(--surface));
+}
+
+.calendar-status {
+  margin: 18px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.calendar-card {
+  display: grid;
+  gap: 8px;
+  min-height: 126px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  box-shadow: var(--soft-shadow);
+}
+
+.calendar-card span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.calendar-card strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.18;
+}
+
+.calendar-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.calendar-today {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--teal) 14%, var(--surface-raised)), var(--surface-raised));
+}
+
+.calendar-empty {
+  grid-column: span 2;
+}
+
 .homepage-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -3391,6 +3493,7 @@ h1 {
   }
 
   .saved-briefings-header,
+  .country-calendar-header,
   .fifa-chart-head,
   .fifa-header,
   .my-news-header {
@@ -3416,6 +3519,7 @@ h1 {
   .saved-briefings-grid,
   .saved-grid,
   .continue-grid,
+  .calendar-grid,
   .fifa-score-grid,
   .fifa-team-chart,
   .category-sections,
@@ -3482,6 +3586,10 @@ h1 {
 
   .saved-briefing-actions {
     flex-direction: column;
+  }
+
+  .calendar-empty {
+    grid-column: auto;
   }
 
   .fifa-captain-grid {

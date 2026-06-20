@@ -13,8 +13,10 @@ let latestArticles = [];
 let visitStats = loadVisitStats();
 let fifaScoreCache = { updatedAt: 0, payload: null };
 let fifaTeamCache = { updatedAt: 0, payload: null };
+let countryCalendarCache = {};
 const FIFA_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 const FIFA_STANDINGS_URL = "https://site.web.api.espn.com/apis/v2/sports/soccer/fifa.world/standings?region=us&lang=en&contentorigin=espn";
+const HOLIDAY_API_BASE = "https://date.nager.at/api/v3/PublicHolidays";
 
 const publicConfig = {
   googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || "",
@@ -672,6 +674,109 @@ async function handleFifaTeams(request, response) {
   }
 }
 
+function calendarDateShape(countryCode) {
+  const now = new Date();
+  const localIsoDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const locale = countryCode && countryCode !== "world" ? `en-${countryCode.toUpperCase()}` : "en";
+  let localDate = now.toLocaleDateString(locale, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  try {
+    localDate = new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(now);
+  } catch {}
+
+  return {
+    isoDate: localIsoDate,
+    localDate,
+    year: now.getFullYear()
+  };
+}
+
+function normalizeHoliday(item) {
+  return {
+    date: item.date,
+    localName: item.localName || item.name || "Holiday",
+    name: item.name || item.localName || "Holiday",
+    global: Boolean(item.global),
+    types: Array.isArray(item.types) ? item.types : []
+  };
+}
+
+async function handleCountryCalendar(request, response, url) {
+  if (request.method !== "GET") {
+    sendJson(response, 405, { error: "Use GET for country calendar." });
+    return;
+  }
+
+  const country = String(url.searchParams.get("country") || "world").toLowerCase();
+  const dateInfo = calendarDateShape(country);
+
+  if (country === "world") {
+    sendJson(response, 200, {
+      country: "World",
+      countryCode: "world",
+      ...dateInfo,
+      holidays: [],
+      source: "Country-specific public holidays appear after selecting a country.",
+      updatedAt: new Date().toISOString()
+    });
+    return;
+  }
+
+  const countryInfo = countries[country];
+  if (!countryInfo) {
+    sendJson(response, 404, { error: "Unknown country", holidays: [], ...dateInfo });
+    return;
+  }
+
+  const apiCountry = String(countryInfo.flagCode || country).toUpperCase();
+  const cacheKey = `${dateInfo.year}-${apiCountry}`;
+  const now = Date.now();
+  if (countryCalendarCache[cacheKey] && now - countryCalendarCache[cacheKey].updatedAt < 12 * 60 * 60 * 1000) {
+    sendJson(response, 200, { ...countryCalendarCache[cacheKey].payload, cached: true });
+    return;
+  }
+
+  try {
+    const holidayResponse = await fetch(`${HOLIDAY_API_BASE}/${dateInfo.year}/${apiCountry}`, {
+      headers: { "User-Agent": `${SITE_NAME}/1.0` }
+    });
+    if (!holidayResponse.ok) throw new Error(`Holiday calendar responded ${holidayResponse.status}`);
+    const holidays = (await holidayResponse.json())
+      .map(normalizeHoliday)
+      .filter((holiday) => holiday.date >= dateInfo.isoDate)
+      .slice(0, 8);
+    const payload = {
+      country: countryInfo.name,
+      countryCode: countryInfo.flagCode,
+      ...dateInfo,
+      holidays,
+      source: "Nager.Date public holiday data",
+      updatedAt: new Date().toISOString()
+    };
+    countryCalendarCache[cacheKey] = { updatedAt: now, payload };
+    sendJson(response, 200, payload);
+  } catch (error) {
+    sendJson(response, 200, {
+      country: countryInfo.name,
+      countryCode: countryInfo.flagCode,
+      ...dateInfo,
+      holidays: [],
+      warning: error.message,
+      source: "Holiday data unavailable for this country right now.",
+      updatedAt: new Date().toISOString()
+    });
+  }
+}
+
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -1198,6 +1303,11 @@ const server = http.createServer((request, response) => {
 
   if (url.pathname === "/api/fifa-teams") {
     handleFifaTeams(request, response);
+    return;
+  }
+
+  if (url.pathname === "/api/country-calendar") {
+    handleCountryCalendar(request, response, url);
     return;
   }
 

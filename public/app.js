@@ -70,6 +70,11 @@ const savedBriefingsTitle = document.querySelector("#saved-briefings-title");
 const savedBriefingsSummary = document.querySelector("#saved-briefings-summary");
 const savedBriefingsGrid = document.querySelector("#saved-briefings-grid");
 const saveBriefingButton = document.querySelector("#save-briefing");
+const calendarTitle = document.querySelector("#calendar-title");
+const calendarSummary = document.querySelector("#calendar-summary");
+const calendarStatus = document.querySelector("#calendar-status");
+const calendarGrid = document.querySelector("#calendar-grid");
+const calendarRefresh = document.querySelector("#calendar-refresh");
 const myNewsSection = document.querySelector("#my-news");
 const myNewsSummary = document.querySelector("#my-news-summary");
 const myNewsPreferences = document.querySelector("#my-news-preferences");
@@ -1376,6 +1381,78 @@ function renderFifaTeams(payload) {
   });
 }
 
+function holidayDateLabel(value) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value || "Date TBA";
+  return date.toLocaleDateString([], { month: "short", day: "numeric", weekday: "short" });
+}
+
+function renderCountryCalendar(payload) {
+  if (!calendarTitle || !calendarSummary || !calendarStatus || !calendarGrid) return;
+  const holidays = payload.holidays || [];
+  calendarTitle.textContent = payload.countryCode === "world"
+    ? "World calendar"
+    : `${payload.country} calendar`;
+  calendarSummary.textContent = payload.countryCode === "world"
+    ? "Choose a country to follow its local public holidays and calendar rhythm."
+    : `Today in ${payload.country}: ${payload.localDate}`;
+  calendarStatus.textContent = payload.warning
+    ? `Calendar note: ${payload.source}`
+    : `${holidays.length ? holidays.length : "No"} upcoming holidays | ${payload.source || "Local calendar"}`;
+
+  calendarGrid.innerHTML = `
+    <article class="calendar-card calendar-today">
+      <span>Today</span>
+      <strong>${escapeHtml(payload.localDate || payload.isoDate || "Today")}</strong>
+      <small>${escapeHtml(payload.country || "World")}</small>
+    </article>
+  `;
+
+  if (!holidays.length) {
+    const empty = document.createElement("article");
+    empty.className = "calendar-card calendar-empty";
+    empty.innerHTML = `
+      <span>Holidays</span>
+      <strong>${payload.countryCode === "world" ? "Pick a country" : "No upcoming holidays found"}</strong>
+      <small>${escapeHtml(payload.warning || "Calendar data will appear when available.")}</small>
+    `;
+    calendarGrid.appendChild(empty);
+    return;
+  }
+
+  holidays.forEach((holiday) => {
+    const card = document.createElement("article");
+    card.className = "calendar-card holiday-card";
+    card.innerHTML = `
+      <span>${escapeHtml(holidayDateLabel(holiday.date))}</span>
+      <strong>${escapeHtml(holiday.localName || holiday.name)}</strong>
+      <small>${escapeHtml(holiday.name || holiday.localName)}${holiday.types?.length ? ` | ${escapeHtml(holiday.types.join(", "))}` : ""}</small>
+    `;
+    calendarGrid.appendChild(card);
+  });
+}
+
+async function loadCountryCalendar() {
+  if (!calendarGrid || !calendarStatus) return;
+  const country = countrySelect.value || "world";
+  calendarStatus.textContent = "Refreshing country calendar...";
+  try {
+    const response = await fetch(`/api/country-calendar?country=${encodeURIComponent(country)}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Calendar unavailable");
+    renderCountryCalendar(payload);
+  } catch (error) {
+    calendarStatus.textContent = `Country calendar unavailable: ${error.message}`;
+    calendarGrid.innerHTML = `
+      <article class="calendar-card calendar-empty">
+        <span>Calendar</span>
+        <strong>Try again soon</strong>
+        <small>We could not load local calendar data right now.</small>
+      </article>
+    `;
+  }
+}
+
 async function loadFifaScores() {
   if (!fifaScoreGrid || !fifaStatus) return;
   fifaStatus.textContent = "Refreshing FIFA scores...";
@@ -2153,6 +2230,7 @@ async function loadMeta() {
 countrySelect.addEventListener("change", () => {
   updateCountryButton();
   renderMyNews();
+  loadCountryCalendar();
   updateUrlState();
   loadNews();
 });
@@ -2250,6 +2328,7 @@ savedStoriesClear?.addEventListener("click", () => {
 });
 fifaRefresh?.addEventListener("click", loadFifaScores);
 fifaRefresh?.addEventListener("click", loadFifaTeams);
+calendarRefresh?.addEventListener("click", loadCountryCalendar);
 fifaStandingsView?.addEventListener("click", () => {
   state.fifaChartMode = "standings";
   if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
@@ -2312,5 +2391,6 @@ function startLiveNewsRefresh() {
 
 loadMeta().then(() => Promise.all([
   loadNews().then(startLiveNewsRefresh),
+  loadCountryCalendar(),
   loadFifaCaptains().then(() => Promise.all([loadFifaScores(), loadFifaTeams()])).then(startFifaScoreRefresh)
 ]));
