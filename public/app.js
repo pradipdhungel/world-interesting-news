@@ -1217,14 +1217,18 @@ function fifaUpdatedLabel(payload) {
 
 function renderFifaTeamRow(team, maxPoints) {
   const pointsPercent = maxPoints > 0 ? Math.max(8, Math.round((team.points / maxPoints) * 100)) : 8;
+  const eliminated = /eliminated/i.test(team.note || "");
   return `
-    <tr>
+    <tr class="${eliminated ? "is-eliminated" : ""}">
       <td class="fifa-rank">${team.rank || "-"}</td>
       <td class="fifa-country-cell">
         <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
         <span>
           <strong>${escapeHtml(team.shortName || team.name)}</strong>
-          <small>${escapeHtml(team.abbreviation || team.name || "")}</small>
+          <small>
+            ${escapeHtml(team.abbreviation || team.name || "")}
+            ${eliminated ? `<em>Eliminated</em>` : ""}
+          </small>
         </span>
       </td>
       <td>${team.played}</td>

@@ -1465,6 +1465,19 @@ h1 {
   background: color-mix(in srgb, var(--teal) 7%, transparent);
 }
 
+.fifa-standings tbody tr.is-eliminated {
+  background: color-mix(in srgb, #ef4444 11%, transparent);
+  box-shadow: inset 4px 0 0 #ef4444;
+}
+
+.fifa-standings tbody tr.is-eliminated:hover {
+  background: color-mix(in srgb, #ef4444 16%, transparent);
+}
+
+.fifa-standings tbody tr.is-eliminated td {
+  border-bottom-color: color-mix(in srgb, #ef4444 28%, var(--line));
+}
+
 .fifa-rank {
   color: var(--muted);
   font-weight: 900;
@@ -1504,6 +1517,36 @@ h1 {
   color: var(--muted);
   font-size: 11px;
   font-weight: 850;
+}
+
+.fifa-country-cell em {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 18px;
+  margin-top: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fifa-standings tbody tr.is-eliminated .fifa-country-cell img {
+  filter: grayscale(0.25) saturate(0.75);
+  opacity: 0.82;
+}
+
+.fifa-standings tbody tr.is-eliminated .fifa-rank,
+.fifa-standings tbody tr.is-eliminated .fifa-points strong {
+  color: #ef4444;
+}
+
+.fifa-standings tbody tr.is-eliminated .fifa-points i {
+  background: linear-gradient(90deg, #ef4444, #991b1b);
 }
 
 .fifa-points {
