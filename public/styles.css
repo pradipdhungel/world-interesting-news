@@ -1610,6 +1610,270 @@ h1 {
   gap: 14px;
 }
 
+.fifa-match-pulse[hidden] {
+  display: none;
+}
+
+.fifa-match-pulse {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 18px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid color-mix(in srgb, var(--teal) 26%, var(--line));
+  border-radius: calc(var(--radius) + 4px);
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.92), rgba(15, 23, 42, 0.82)),
+    radial-gradient(circle at 14% 12%, rgba(20, 184, 166, 0.34), transparent 30%),
+    radial-gradient(circle at 96% 0%, rgba(239, 68, 68, 0.34), transparent 32%);
+  color: white;
+  box-shadow: 0 28px 70px rgba(2, 6, 23, 0.28);
+  isolation: isolate;
+}
+
+.fifa-match-pulse::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 82%);
+}
+
+.fifa-match-pulse.is-live {
+  border-color: color-mix(in srgb, var(--accent) 62%, white);
+  box-shadow: 0 30px 80px rgba(239, 68, 68, 0.26);
+}
+
+.fifa-pulse-main {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.2fr);
+  gap: clamp(16px, 3vw, 30px);
+  align-items: center;
+}
+
+.fifa-pulse-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d1fae5;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fifa-pulse-kicker i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.72);
+  animation: livePulse 1.35s ease-out infinite;
+}
+
+.fifa-pulse-copy h3 {
+  max-width: 660px;
+  margin: 12px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 5vw, 58px);
+  line-height: 0.98;
+}
+
+.fifa-pulse-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.5;
+}
+
+.fifa-pulse-scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.fifa-pulse-team,
+.fifa-pulse-clock {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.fifa-pulse-team {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.fifa-pulse-team img {
+  width: 48px;
+  height: 48px;
+  grid-row: span 2;
+  border-radius: 50%;
+  object-fit: contain;
+  background: white;
+  padding: 5px;
+}
+
+.fifa-pulse-team span {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fifa-pulse-team strong {
+  font-size: clamp(44px, 7vw, 78px);
+  line-height: 0.86;
+}
+
+.fifa-pulse-clock {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  min-width: 92px;
+  padding: 14px 12px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.fifa-pulse-clock span {
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.fifa-pulse-clock small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.fifa-pulse-details {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.fifa-pulse-meter,
+.fifa-pulse-momentum,
+.fifa-pulse-link {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.fifa-pulse-meter {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.fifa-pulse-meter div,
+.fifa-pulse-momentum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fifa-pulse-meter span,
+.fifa-pulse-momentum span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fifa-pulse-meter strong {
+  color: #fecaca;
+}
+
+.fifa-pulse-meter b,
+.fifa-pulse-momentum b {
+  overflow: hidden;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.fifa-pulse-meter b i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #14b8a6, #facc15, #ef4444);
+}
+
+.fifa-pulse-momentum {
+  padding: 12px 14px;
+}
+
+.fifa-pulse-momentum b {
+  display: flex;
+  flex: 1;
+  min-width: 92px;
+}
+
+.fifa-pulse-momentum i.home {
+  background: #38bdf8;
+}
+
+.fifa-pulse-momentum i.away {
+  background: #fb7185;
+}
+
+.fifa-pulse-momentum i {
+  display: block;
+  height: 100%;
+}
+
+.fifa-pulse-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  color: white;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fifa-pulse-link:hover {
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@keyframes livePulse {
+  70% {
+    box-shadow: 0 0 0 9px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 .fifa-chart-head {
   display: flex;
   align-items: end;
@@ -3644,6 +3908,19 @@ h1 {
     justify-items: start;
   }
 
+  .fifa-pulse-main,
+  .fifa-pulse-details {
+    grid-template-columns: 1fr;
+  }
+
+  .fifa-pulse-scoreboard {
+    grid-template-columns: 1fr;
+  }
+
+  .fifa-pulse-clock {
+    min-height: 76px;
+  }
+
   .fifa-wall-chart {
     grid-template-columns: 220px 620px 220px;
     overflow-x: auto;
@@ -3712,6 +3989,39 @@ h1 {
 @media (max-width: 560px) {
   main {
     padding-top: 14px;
+  }
+
+  .fifa-match-pulse {
+    border-radius: 22px;
+  }
+
+  .fifa-pulse-copy h3 {
+    font-size: clamp(28px, 12vw, 42px);
+  }
+
+  .fifa-pulse-team {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    border-radius: 18px;
+  }
+
+  .fifa-pulse-team img {
+    width: 42px;
+    height: 42px;
+    grid-row: auto;
+  }
+
+  .fifa-pulse-team strong {
+    font-size: 42px;
+  }
+
+  .fifa-pulse-momentum {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fifa-pulse-link {
+    width: 100%;
   }
 
   .topbar-inner {

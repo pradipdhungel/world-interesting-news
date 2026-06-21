@@ -89,6 +89,7 @@ const savedStoriesClear = document.querySelector("#saved-clear");
 const fifaTitle = document.querySelector("#fifa-title");
 const fifaSummary = document.querySelector("#fifa-summary");
 const fifaStatus = document.querySelector("#fifa-status");
+const fifaMatchPulse = document.querySelector("#fifa-match-pulse");
 const fifaScoreGrid = document.querySelector("#fifa-score-grid");
 const fifaChartMeta = document.querySelector("#fifa-chart-meta");
 const fifaTeamChart = document.querySelector("#fifa-team-chart");
@@ -1063,8 +1064,122 @@ function renderTeam(team, side) {
   return `
     <div class="fifa-team ${side}">
       <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
-      <span>${team.shortName || team.name}</span>
+      <span>${escapeHtml(team.shortName || team.name)}</span>
       <strong>${Number(team.score || 0)}</strong>
+    </div>
+  `;
+}
+
+function fifaScoreNumber(team) {
+  return Number(team?.score || 0);
+}
+
+function fifaPulseMatch(matches) {
+  return matches.find((match) => match.live)
+    || matches.find((match) => !match.completed)
+    || matches.find((match) => match.completed)
+    || null;
+}
+
+function fifaExcitementLevel(match) {
+  if (!match) return 0;
+  const homeScore = fifaScoreNumber(match.home);
+  const awayScore = fifaScoreNumber(match.away);
+  const totalGoals = homeScore + awayScore;
+  const closeGame = Math.abs(homeScore - awayScore) <= 1;
+  const lateClock = /8[0-9]|9[0-9]|ET|stoppage|pen/i.test(`${match.clock || ""} ${match.statusLabel || ""}`);
+  let level = totalGoals * 16;
+  if (match.live) level += 42;
+  if (closeGame) level += 18;
+  if (lateClock) level += 16;
+  if (!match.live && !match.completed) level = 38;
+  if (match.completed) level = Math.max(42, Math.min(88, level));
+  return Math.max(22, Math.min(100, level));
+}
+
+function fifaMomentumShare(match) {
+  const homeScore = fifaScoreNumber(match.home);
+  const awayScore = fifaScoreNumber(match.away);
+  if (homeScore === awayScore) return 50;
+  return homeScore > awayScore ? 63 : 37;
+}
+
+function fifaPulseLabel(match) {
+  if (match.live) return "Live Stadium Pulse";
+  if (match.completed) return "Final Whistle";
+  return "Next Match Spotlight";
+}
+
+function fifaPulseStatus(match) {
+  if (match.live) return match.clock || match.statusLabel || "Live now";
+  if (match.completed) return "Final";
+  return matchTimeLabel(match);
+}
+
+function renderFifaPulseTeam(team, side) {
+  return `
+    <div class="fifa-pulse-team ${side}">
+      <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
+      <span>${escapeHtml(team.shortName || team.name)}</span>
+      <strong>${fifaScoreNumber(team)}</strong>
+    </div>
+  `;
+}
+
+function renderFifaMatchPulse(matches) {
+  if (!fifaMatchPulse) return;
+  const match = fifaPulseMatch(matches);
+  if (!match) {
+    fifaMatchPulse.hidden = true;
+    fifaMatchPulse.innerHTML = "";
+    return;
+  }
+
+  const excitement = fifaExcitementLevel(match);
+  const homeShare = fifaMomentumShare(match);
+  const awayShare = 100 - homeShare;
+  const sourceLink = match.link || fifaSource?.href || "https://www.espn.com/soccer/scoreboard/_/league/fifa.world";
+  const broadcast = match.broadcasts?.join(", ") || match.statusLabel || "Match feed";
+  const pulseClass = match.live ? "is-live" : match.completed ? "is-final" : "is-upcoming";
+
+  fifaMatchPulse.hidden = false;
+  fifaMatchPulse.className = `fifa-match-pulse ${pulseClass}`;
+  fifaMatchPulse.innerHTML = `
+    <div class="fifa-pulse-main">
+      <div class="fifa-pulse-copy">
+        <span class="fifa-pulse-kicker">
+          ${match.live ? `<i aria-hidden="true"></i>` : ""}
+          ${fifaPulseLabel(match)}
+        </span>
+        <h3>${escapeHtml(match.shortName || match.name || "FIFA match")}</h3>
+        <p>${escapeHtml(match.venue || "Venue TBA")} · ${escapeHtml(broadcast)}</p>
+      </div>
+      <div class="fifa-pulse-scoreboard" aria-label="${escapeHtml(match.shortName || match.name || "FIFA score")}">
+        ${renderFifaPulseTeam(match.home, "home")}
+        <div class="fifa-pulse-clock">
+          <span>${escapeHtml(fifaPulseStatus(match))}</span>
+          <small>${match.live ? "Live" : match.completed ? "Result" : "Kickoff"}</small>
+        </div>
+        ${renderFifaPulseTeam(match.away, "away")}
+      </div>
+    </div>
+    <div class="fifa-pulse-details">
+      <div class="fifa-pulse-meter">
+        <div>
+          <span>Match heat</span>
+          <strong>${excitement}%</strong>
+        </div>
+        <b aria-hidden="true"><i style="width:${excitement}%"></i></b>
+      </div>
+      <div class="fifa-pulse-momentum" aria-label="Score momentum">
+        <span>${escapeHtml(match.home.shortName || match.home.name)}</span>
+        <b aria-hidden="true">
+          <i class="home" style="width:${homeShare}%"></i>
+          <i class="away" style="width:${awayShare}%"></i>
+        </b>
+        <span>${escapeHtml(match.away.shortName || match.away.name)}</span>
+      </div>
+      <a class="fifa-pulse-link" href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener noreferrer">Match details</a>
     </div>
   `;
 }
@@ -1183,6 +1298,7 @@ function renderFifaScores(payload) {
   }
   fifaStatus.textContent = fifaUpdatedLabel(payload);
   if (fifaSource && payload.sourceUrl) fifaSource.href = payload.sourceUrl;
+  renderFifaMatchPulse(matches);
 
   if (!matches.length) {
     fifaScoreGrid.innerHTML = `<div class="fifa-empty">No FIFA matches are listed right now. Check back soon for the next fixture.</div>`;
