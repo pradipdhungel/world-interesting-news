@@ -1343,26 +1343,22 @@ function fifaUpdatedLabel(payload) {
 
 function renderFifaTeamRow(team, maxPoints) {
   const pointsPercent = maxPoints > 0 ? Math.max(8, Math.round((team.points / maxPoints) * 100)) : 8;
-  const eliminated = /eliminated/i.test(team.note || "");
   return `
-    <tr class="${eliminated ? "is-eliminated" : ""}">
-      <td class="fifa-rank">${team.rank || "-"}</td>
+    <tr>
+      <td class="fifa-rank" data-label="Rank">${team.rank || "-"}</td>
       <td class="fifa-country-cell">
         <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
         <span>
           <strong>${escapeHtml(team.shortName || team.name)}</strong>
-          <small>
-            ${escapeHtml(team.abbreviation || team.name || "")}
-            ${eliminated ? `<em>Eliminated</em>` : ""}
-          </small>
+          <small>${escapeHtml(team.abbreviation || team.name || "")}</small>
         </span>
       </td>
-      <td>${team.played}</td>
-      <td>${team.wins}</td>
-      <td>${team.draws}</td>
-      <td>${team.losses}</td>
-      <td>${escapeHtml(String(team.goalDifference))}</td>
-      <td class="fifa-points">
+      <td data-label="Played">${team.played}</td>
+      <td data-label="Wins">${team.wins}</td>
+      <td data-label="Draws">${team.draws}</td>
+      <td data-label="Losses">${team.losses}</td>
+      <td data-label="Goal diff">${escapeHtml(String(team.goalDifference))}</td>
+      <td class="fifa-points" data-label="Points">
         <strong>${team.points}</strong>
         <span aria-hidden="true"><i style="width:${pointsPercent}%"></i></span>
       </td>
@@ -1378,9 +1374,8 @@ function renderWallGroup(group) {
         <span>Pts</span>
       </div>
       ${group.teams.map((team) => {
-        const eliminated = /eliminated/i.test(team.note || "");
         return `
-          <div class="wall-team${eliminated ? " is-eliminated" : ""}">
+          <div class="wall-team">
             <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
             <span>${escapeHtml(team.abbreviation || team.shortName || team.name)}</span>
             <strong>${team.points}</strong>
@@ -1492,7 +1487,7 @@ function renderFifaTeams(payload) {
           <tbody>${group.teams.map((team) => renderFifaTeamRow(team, maxPoints)).join("")}</tbody>
         </table>
       </div>
-      ${group.teams.some((team) => team.note) ? `<p class="fifa-group-note">${escapeHtml(group.teams.find((team) => team.note)?.note || "")}</p>` : ""}
+      <p class="fifa-group-note">Official group table. Qualification status is shown only after it is confirmed by the competition source.</p>
     `;
     fifaTeamChart.appendChild(section);
   });
