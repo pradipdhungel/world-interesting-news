@@ -110,6 +110,10 @@ const fifaSource = document.querySelector("#fifa-source");
 const pageTitle = document.querySelector("#page-title");
 const feedLabel = document.querySelector("#feed-label");
 const updatedLabel = document.querySelector("#updated-label");
+const smartBriefing = document.querySelector("#smart-briefing");
+const smartBriefingSummary = document.querySelector("#smart-briefing-summary");
+const smartBriefingGrid = document.querySelector("#smart-briefing-grid");
+const smartBriefingCta = document.querySelector("#smart-briefing-cta");
 const breakingTicker = document.querySelector("#breaking-ticker");
 const breakingCount = document.querySelector("#breaking-count");
 const breakingTime = document.querySelector("#breaking-time");
@@ -2216,6 +2220,8 @@ function setLoading() {
   if (secondaryStories) secondaryStories.innerHTML = "";
   if (trendingList) trendingList.innerHTML = "";
   if (categorySections) categorySections.innerHTML = "";
+  if (smartBriefingGrid) smartBriefingGrid.innerHTML = "";
+  if (smartBriefing) smartBriefing.hidden = true;
   for (let index = 0; index < 9; index += 1) {
     const skeleton = document.createElement("div");
     skeleton.className = "skeleton-card";
@@ -2338,6 +2344,125 @@ function createCompactStory(article, index) {
   return link;
 }
 
+function countBy(items, getter) {
+  return items.reduce((map, item) => {
+    const key = getter(item);
+    if (!key) return map;
+    map.set(key, (map.get(key) || 0) + 1);
+    return map;
+  }, new Map());
+}
+
+function topEntries(map, limit = 4) {
+  return Array.from(map.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit);
+}
+
+function keywordList(articles) {
+  const stopWords = new Set([
+    "about", "after", "again", "against", "from", "have", "into", "more", "news", "over", "said",
+    "that", "their", "this", "with", "world", "will", "your", "amid", "live", "latest"
+  ]);
+  const words = new Map();
+  articles.slice(0, 14).forEach((article) => {
+    `${article.title || ""} ${article.summary || ""}`.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 3 && !stopWords.has(word))
+      .forEach((word) => words.set(word, (words.get(word) || 0) + 1));
+  });
+  return topEntries(words, 5).map(([word]) => word);
+}
+
+function freshnessLabel(articles) {
+  const newest = articles
+    .map((article) => new Date(article.publishedAt || 0).getTime())
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0];
+  if (!newest) return "Freshness unknown";
+  const minutes = Math.max(1, Math.round((Date.now() - newest) / 60000));
+  if (minutes < 60) return `Updated ${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return `Updated ${hours} hr ago`;
+}
+
+function renderSmartBriefing(articles) {
+  if (!smartBriefing || !smartBriefingGrid) return;
+  smartBriefingGrid.innerHTML = "";
+
+  if (!articles.length) {
+    smartBriefing.hidden = true;
+    return;
+  }
+
+  smartBriefing.hidden = false;
+  const lead = articles[0];
+  const categories = topEntries(countBy(articles, (article) => normalizeCategory(article.category)), 3);
+  const sources = topEntries(countBy(articles, (article) => article.source?.name), 4);
+  const keywords = keywordList(articles);
+  const country = countrySelect.value === "world"
+    ? "World"
+    : countrySelect.options[countrySelect.selectedIndex]?.text || "Selected country";
+  const category = normalizeCategory(categorySelect.value || "top");
+
+  if (smartBriefingSummary) {
+    smartBriefingSummary.textContent = `${articles.length} sourced stories in ${country} · ${category} · ${freshnessLabel(articles)}`;
+  }
+  if (smartBriefingCta) smartBriefingCta.href = articleLink(lead);
+
+  smartBriefingGrid.innerHTML = `
+    <a class="smart-lead" href="${escapeHtml(articleLink(lead))}">
+      <span class="smart-lead-media">
+        ${lead.image
+          ? `<img src="${escapeHtml(lead.image)}" alt="" loading="lazy">`
+          : `<span class="smart-generated">${flagImageMarkup(lead, "generated-flag-img")}<strong>${escapeHtml(generatedImageLabel(lead))}</strong></span>`}
+      </span>
+      <span class="smart-lead-copy">
+        <small>${escapeHtml(normalizeCategory(lead.category))} · ${escapeHtml(lead.source?.name || "Source")}</small>
+        <strong>${escapeHtml(lead.title)}</strong>
+        <em>${escapeHtml(lead.summary || "Open the full report for more context.")}</em>
+      </span>
+    </a>
+    <div class="smart-stack">
+      <article class="smart-panel">
+        <span>Top signals</span>
+        <div class="smart-metric-row">
+          <strong>${articles.length}</strong>
+          <small>Sourced stories</small>
+        </div>
+        <div class="smart-metric-row">
+          <strong>${sources.length}</strong>
+          <small>Active sources</small>
+        </div>
+        <div class="smart-metric-row">
+          <strong>${categories.length}</strong>
+          <small>Hot sections</small>
+        </div>
+      </article>
+      <article class="smart-panel">
+        <span>Trending topics</span>
+        <div class="smart-tags">
+          ${(keywords.length ? keywords : categories.map(([name]) => name)).map((word) => `<a href="/?q=${encodeURIComponent(word)}">${escapeHtml(word)}</a>`).join("")}
+        </div>
+      </article>
+    </div>
+    <div class="smart-list">
+      <div class="smart-list-title">
+        <span>Fast read</span>
+        <strong>5 stories to open now</strong>
+      </div>
+      ${articles.slice(1, 6).map((article, index) => `
+        <a href="${escapeHtml(articleLink(article))}">
+          <span>${String(index + 1).padStart(2, "0")}</span>
+          <strong>${escapeHtml(article.title)}</strong>
+          <small>${escapeHtml(article.source?.name || "Source")} · ${formatDate(article.publishedAt)}</small>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
 function stopBreakingTimer() {
   if (state.breakingTimer) {
     clearInterval(state.breakingTimer);
@@ -2446,6 +2571,7 @@ function renderArticles() {
   feedLabel.textContent = `${articles.length} ${currentText().sourcedStories}`;
   renderCategoryNavigation();
   renderBreakingNews(articles);
+  renderSmartBriefing(articles);
   renderSavedBriefings();
   renderReturningFeed();
   renderMyNews();
@@ -2457,6 +2583,7 @@ function renderArticles() {
     if (secondaryStories) secondaryStories.innerHTML = "";
     if (trendingList) trendingList.innerHTML = "";
     if (categorySections) categorySections.innerHTML = "";
+    if (smartBriefing) smartBriefing.hidden = true;
     grid.innerHTML = `<div class="empty-state">${currentText().noStories}</div>`;
     return;
   }
