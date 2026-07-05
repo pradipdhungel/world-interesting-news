@@ -1528,14 +1528,18 @@ function renderWallGroup(group) {
     <section class="wall-group">
       <div class="wall-group-title">
         <strong>${escapeHtml(group.name)}</strong>
-        <span>Pts</span>
+        <span>Table</span>
       </div>
       ${group.teams.map((team) => {
         return `
           <div class="wall-team">
+            <b>${team.rank || "-"}</b>
             <img src="${team.logo || "/favicon.svg"}" alt="" loading="lazy">
-            <span>${escapeHtml(team.abbreviation || team.shortName || team.name)}</span>
-            <strong>${team.points}</strong>
+            <span>
+              <strong>${escapeHtml(team.abbreviation || team.shortName || team.name)}</strong>
+              <small>${team.wins}-${team.draws}-${team.losses} · GD ${escapeHtml(String(team.goalDifference))}</small>
+            </span>
+            <em>${team.points}</em>
           </div>
         `;
       }).join("")}
@@ -1543,21 +1547,23 @@ function renderWallGroup(group) {
   `;
 }
 
-function wallSeedName(groups, index) {
-  const teams = groups.flatMap((group) => group.teams || []);
-  const team = teams[index];
-  if (!team) return "TBD";
-  return team.abbreviation || team.shortName || team.name || "TBD";
+function renderWallSlot(label) {
+  return `
+    <div class="wall-slot">
+      <span>${escapeHtml(label)}</span>
+      <strong>TBD</strong>
+    </div>
+  `;
 }
 
-function renderBracketColumn(title, count, groups, offset = 0) {
+function renderBracketColumn(title, labels) {
   return `
     <div class="wall-round">
       <h5>${title}</h5>
-      ${Array.from({ length: count }, (_, index) => `
+      ${labels.map((label) => `
         <div class="wall-match">
-          <span>${escapeHtml(wallSeedName(groups, offset + index * 2))}</span>
-          <span>${escapeHtml(wallSeedName(groups, offset + index * 2 + 1))}</span>
+          ${renderWallSlot(label[0])}
+          ${renderWallSlot(label[1])}
         </div>
       `).join("")}
     </div>
@@ -1569,27 +1575,35 @@ function renderFifaWallChart(groups) {
   const rightGroups = groups.slice(Math.ceil(groups.length / 2));
   fifaTeamChart.className = "fifa-wall-chart";
   fifaTeamChart.innerHTML = `
+    <div class="wall-poster-head">
+      <div>
+        <span>FIFA World Cup</span>
+        <strong>Interactive Wall Chart</strong>
+        <small>Group tables are live. Knockout bracket stays pending until official qualifiers are confirmed.</small>
+      </div>
+      <em>${groups.length} groups · ${groups.reduce((sum, group) => sum + (group.teams?.length || 0), 0)} teams</em>
+    </div>
     <div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>
     <div class="wall-center">
       <div class="wall-trophy">
-        <span>FIFA</span>
-        <strong>World Cup</strong>
-        <small>Wall Chart</small>
+        <span>Road to</span>
+        <strong>Final</strong>
+        <small>Official qualifiers pending</small>
       </div>
       <div class="wall-bracket">
-        ${renderBracketColumn("Round of 32", 4, groups, 0)}
-        ${renderBracketColumn("Round of 16", 2, groups, 8)}
+        ${renderBracketColumn("Round of 32", [["A1", "B2"], ["C1", "D2"], ["E1", "F2"], ["G1", "H2"]])}
+        ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
         <div class="wall-final-path">
           <div class="wall-stage">Quarter-finals</div>
           <div class="wall-stage">Semi-finals</div>
           <div class="wall-final-box">
             <span>Final</span>
-            <strong>Winner TBD</strong>
+            <strong>Champion TBD</strong>
           </div>
           <div class="wall-stage">Third place</div>
         </div>
-        ${renderBracketColumn("Round of 16", 2, groups, 12)}
-        ${renderBracketColumn("Round of 32", 4, groups, 16)}
+        ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
+        ${renderBracketColumn("Round of 32", [["I1", "J2"], ["K1", "L2"], ["Best 3rd", "Group winner"], ["Best 3rd", "Group winner"]])}
       </div>
     </div>
     <div class="wall-side wall-right">${rightGroups.map(renderWallGroup).join("")}</div>
