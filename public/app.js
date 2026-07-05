@@ -114,6 +114,9 @@ const smartBriefing = document.querySelector("#smart-briefing");
 const smartBriefingSummary = document.querySelector("#smart-briefing-summary");
 const smartBriefingGrid = document.querySelector("#smart-briefing-grid");
 const smartBriefingCta = document.querySelector("#smart-briefing-cta");
+const newsTimeline = document.querySelector("#news-timeline");
+const newsTimelineSummary = document.querySelector("#news-timeline-summary");
+const newsTimelineList = document.querySelector("#news-timeline-list");
 const breakingTicker = document.querySelector("#breaking-ticker");
 const breakingCount = document.querySelector("#breaking-count");
 const breakingTime = document.querySelector("#breaking-time");
@@ -2222,6 +2225,8 @@ function setLoading() {
   if (categorySections) categorySections.innerHTML = "";
   if (smartBriefingGrid) smartBriefingGrid.innerHTML = "";
   if (smartBriefing) smartBriefing.hidden = true;
+  if (newsTimelineList) newsTimelineList.innerHTML = "";
+  if (newsTimeline) newsTimeline.hidden = true;
   for (let index = 0; index < 9; index += 1) {
     const skeleton = document.createElement("div");
     skeleton.className = "skeleton-card";
@@ -2463,6 +2468,66 @@ function renderSmartBriefing(articles) {
   `;
 }
 
+function timelineBucket(article) {
+  const published = new Date(article.publishedAt || 0);
+  if (Number.isNaN(published.getTime())) return "Recently";
+  const minutes = Math.max(0, Math.round((Date.now() - published.getTime()) / 60000));
+  if (minutes < 60) return "Last hour";
+  if (minutes < 360) return "Last 6 hours";
+  if (minutes < 1440) return "Today";
+  return published.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function timelineMeta(article) {
+  const category = normalizeCategory(article.category);
+  const source = article.source?.name || "Source";
+  return `${category} · ${source} · ${formatDate(article.publishedAt)}`;
+}
+
+function renderNewsTimeline(articles) {
+  if (!newsTimeline || !newsTimelineList) return;
+  newsTimelineList.innerHTML = "";
+
+  const newest = [...articles]
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
+    .slice(0, 12);
+
+  if (!newest.length) {
+    newsTimeline.hidden = true;
+    return;
+  }
+
+  newsTimeline.hidden = false;
+  if (newsTimelineSummary) {
+    const sourceCount = new Set(newest.map((article) => article.source?.name).filter(Boolean)).size;
+    newsTimelineSummary.textContent = `${newest.length} latest updates from ${sourceCount || "multiple"} sources, ordered newest first.`;
+  }
+
+  const groups = new Map();
+  newest.forEach((article) => {
+    const bucket = timelineBucket(article);
+    if (!groups.has(bucket)) groups.set(bucket, []);
+    groups.get(bucket).push(article);
+  });
+
+  newsTimelineList.innerHTML = Array.from(groups.entries()).map(([bucket, items]) => `
+    <section class="timeline-group">
+      <div class="timeline-time">
+        <span>${escapeHtml(bucket)}</span>
+      </div>
+      <div class="timeline-items">
+        ${items.map((article) => `
+          <a class="timeline-item" href="${escapeHtml(articleLink(article))}">
+            <span class="timeline-dot" aria-hidden="true"></span>
+            <strong>${escapeHtml(article.title)}</strong>
+            <small>${escapeHtml(timelineMeta(article))}</small>
+          </a>
+        `).join("")}
+      </div>
+    </section>
+  `).join("");
+}
+
 function stopBreakingTimer() {
   if (state.breakingTimer) {
     clearInterval(state.breakingTimer);
@@ -2572,6 +2637,7 @@ function renderArticles() {
   renderCategoryNavigation();
   renderBreakingNews(articles);
   renderSmartBriefing(articles);
+  renderNewsTimeline(articles);
   renderSavedBriefings();
   renderReturningFeed();
   renderMyNews();
@@ -2584,6 +2650,7 @@ function renderArticles() {
     if (trendingList) trendingList.innerHTML = "";
     if (categorySections) categorySections.innerHTML = "";
     if (smartBriefing) smartBriefing.hidden = true;
+    if (newsTimeline) newsTimeline.hidden = true;
     grid.innerHTML = `<div class="empty-state">${currentText().noStories}</div>`;
     return;
   }
