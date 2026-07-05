@@ -23,7 +23,11 @@ const state = {
   query: "",
   returningStories: [],
   returningLastVisitedAt: "",
-  returningDismissed: false
+  returningDismissed: false,
+  gameArticles: [],
+  gameIndex: 0,
+  gameScore: 0,
+  gameAnswered: false
 };
 
 const countrySelect = document.querySelector("#country-select");
@@ -117,6 +121,9 @@ const smartBriefingCta = document.querySelector("#smart-briefing-cta");
 const newsTimeline = document.querySelector("#news-timeline");
 const newsTimelineSummary = document.querySelector("#news-timeline-summary");
 const newsTimelineList = document.querySelector("#news-timeline-list");
+const newsGame = document.querySelector("#news-game");
+const newsGameBoard = document.querySelector("#news-game-board");
+const gameScore = document.querySelector("#game-score");
 const breakingTicker = document.querySelector("#breaking-ticker");
 const breakingCount = document.querySelector("#breaking-count");
 const breakingTime = document.querySelector("#breaking-time");
@@ -2227,6 +2234,8 @@ function setLoading() {
   if (smartBriefing) smartBriefing.hidden = true;
   if (newsTimelineList) newsTimelineList.innerHTML = "";
   if (newsTimeline) newsTimeline.hidden = true;
+  if (newsGameBoard) newsGameBoard.innerHTML = "";
+  if (newsGame) newsGame.hidden = true;
   for (let index = 0; index < 9; index += 1) {
     const skeleton = document.createElement("div");
     skeleton.className = "skeleton-card";
@@ -2528,6 +2537,97 @@ function renderNewsTimeline(articles) {
   `).join("");
 }
 
+function gameArticlePool(articles) {
+  return articles
+    .filter((article) => article?.title && article?.category && article?.source?.name)
+    .slice(0, 18);
+}
+
+function gameQuestionType(article) {
+  const key = `${article.id || article.title}-${state.gameIndex}`;
+  return key.length % 2 === 0 ? "category" : "source";
+}
+
+function gameOptions(articles, article, type) {
+  const correct = type === "category" ? normalizeCategory(article.category) : article.source.name;
+  const values = articles
+    .map((item) => type === "category" ? normalizeCategory(item.category) : item.source?.name)
+    .filter((value) => value && value !== correct);
+  const unique = [...new Set(values)].slice(0, 8);
+  const options = [correct, ...unique.slice(0, 3)];
+  while (options.length < 4) {
+    options.push(type === "category" ? `News ${options.length}` : `Source ${options.length}`);
+  }
+  return options
+    .slice(0, 4)
+    .sort((a, b) => (a.length + state.gameIndex) % 3 - (b.length + state.gameIndex) % 3);
+}
+
+function renderNewsGame(articles) {
+  if (!newsGame || !newsGameBoard) return;
+  const pool = gameArticlePool(articles);
+
+  if (pool.length < 4) {
+    newsGame.hidden = true;
+    return;
+  }
+
+  newsGame.hidden = false;
+  state.gameArticles = pool;
+  if (state.gameIndex >= pool.length) state.gameIndex = 0;
+  const article = pool[state.gameIndex];
+  const type = gameQuestionType(article);
+  const correct = type === "category" ? normalizeCategory(article.category) : article.source.name;
+  const options = gameOptions(pool, article, type);
+  const prompt = type === "category" ? "Which category is this headline from?" : "Which source published this story?";
+
+  if (gameScore) gameScore.textContent = String(state.gameScore);
+  newsGameBoard.innerHTML = `
+    <article class="game-card ${state.gameAnswered ? "is-answered" : ""}">
+      <div class="game-progress">
+        <span>Question ${state.gameIndex + 1}/${pool.length}</span>
+        <span>${state.gameAnswered ? "Answered" : "Pick one"}</span>
+      </div>
+      <p class="game-prompt">${escapeHtml(prompt)}</p>
+      <h3>${escapeHtml(article.title)}</h3>
+      <div class="game-options">
+        ${options.map((option) => {
+          const isCorrect = option === correct;
+          const buttonClass = state.gameAnswered ? (isCorrect ? "is-correct" : "is-muted") : "";
+          return `<button class="${buttonClass}" type="button" data-game-answer="${escapeHtml(option)}"${state.gameAnswered ? " disabled" : ""}>${escapeHtml(option)}</button>`;
+        }).join("")}
+      </div>
+      <div class="game-result" aria-live="polite">
+        ${state.gameAnswered
+          ? `<strong>Correct answer: ${escapeHtml(correct)}</strong><a href="${escapeHtml(articleLink(article))}">Read this story</a>`
+          : `<span>Answer to unlock the story link.</span>`}
+      </div>
+      <div class="game-actions">
+        <button type="button" id="game-next">${state.gameAnswered ? "Next headline" : "Skip"}</button>
+        <button type="button" id="game-reset">Reset score</button>
+      </div>
+    </article>
+  `;
+}
+
+function answerNewsGame(answer) {
+  if (!state.gameArticles.length || state.gameAnswered) return;
+  const article = state.gameArticles[state.gameIndex];
+  const type = gameQuestionType(article);
+  const correct = type === "category" ? normalizeCategory(article.category) : article.source.name;
+  if (answer === correct) state.gameScore += 1;
+  state.gameAnswered = true;
+  renderNewsGame(state.gameArticles);
+}
+
+function nextNewsGameQuestion(resetScore = false) {
+  if (!state.gameArticles.length) return;
+  if (resetScore) state.gameScore = 0;
+  state.gameAnswered = false;
+  state.gameIndex = resetScore ? 0 : (state.gameIndex + 1) % state.gameArticles.length;
+  renderNewsGame(state.gameArticles);
+}
+
 function stopBreakingTimer() {
   if (state.breakingTimer) {
     clearInterval(state.breakingTimer);
@@ -2638,6 +2738,7 @@ function renderArticles() {
   renderBreakingNews(articles);
   renderSmartBriefing(articles);
   renderNewsTimeline(articles);
+  renderNewsGame(articles);
   renderSavedBriefings();
   renderReturningFeed();
   renderMyNews();
@@ -2651,6 +2752,7 @@ function renderArticles() {
     if (categorySections) categorySections.innerHTML = "";
     if (smartBriefing) smartBriefing.hidden = true;
     if (newsTimeline) newsTimeline.hidden = true;
+    if (newsGame) newsGame.hidden = true;
     grid.innerHTML = `<div class="empty-state">${currentText().noStories}</div>`;
     return;
   }
@@ -2873,6 +2975,20 @@ sortSelect.addEventListener("change", () => {
 sourceSelect.addEventListener("change", () => {
   syncSourcePicker();
   renderArticles();
+});
+newsGameBoard?.addEventListener("click", (event) => {
+  const answerButton = event.target.closest("[data-game-answer]");
+  if (answerButton) {
+    answerNewsGame(answerButton.dataset.gameAnswer || "");
+    return;
+  }
+  if (event.target.closest("#game-next")) {
+    nextNewsGameQuestion(false);
+    return;
+  }
+  if (event.target.closest("#game-reset")) {
+    nextNewsGameQuestion(true);
+  }
 });
 refreshButton.addEventListener("click", loadNews);
 followCountryButton?.addEventListener("click", () => {

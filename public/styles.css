@@ -1186,6 +1186,188 @@ h1 {
   font-weight: 850;
 }
 
+.news-game[hidden] {
+  display: none;
+}
+
+.news-game {
+  margin-top: 18px;
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) 15%, transparent), transparent 34%),
+    radial-gradient(circle at 0 100%, color-mix(in srgb, var(--teal) 13%, transparent), transparent 32%),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-raised) 93%, transparent), var(--surface));
+  box-shadow: var(--soft-shadow);
+}
+
+.news-game-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.news-game-header h2 {
+  margin: 4px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.02;
+}
+
+.news-game-header p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.news-game-score {
+  display: grid;
+  min-width: 92px;
+  min-height: 74px;
+  place-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.news-game-score span {
+  color: var(--accent-strong);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.9;
+}
+
+.news-game-score small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-card {
+  display: grid;
+  gap: 16px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soft) 74%, transparent), var(--surface));
+}
+
+.game-progress,
+.game-actions,
+.game-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.game-progress span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--teal) 9%, var(--surface));
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-prompt {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-card h3 {
+  max-width: 920px;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3.6vw, 42px);
+  line-height: 1.04;
+}
+
+.game-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.game-options button,
+.game-actions button {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 950;
+  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.game-options button:hover:not(:disabled),
+.game-actions button:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.game-options button.is-correct {
+  border-color: #16a34a;
+  background: color-mix(in srgb, #16a34a 14%, var(--surface));
+  color: #166534;
+}
+
+.game-options button.is-muted {
+  opacity: 0.56;
+}
+
+.game-result {
+  min-height: 42px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.game-result strong {
+  color: var(--ink);
+}
+
+.game-result a {
+  color: var(--accent-strong);
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.game-actions {
+  justify-content: flex-start;
+}
+
+.game-actions button {
+  padding: 0 16px;
+}
+
+.game-actions #game-next {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
 .saved-briefings {
   margin-top: 18px;
   padding: clamp(18px, 4vw, 28px);
@@ -4390,9 +4572,14 @@ h1 {
   .fifa-header,
   .my-news-header,
   .smart-briefing-header,
-  .news-timeline-header {
+  .news-timeline-header,
+  .news-game-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .news-game-score {
+    width: fit-content;
   }
 
   #smart-briefing-cta,
@@ -4643,6 +4830,20 @@ h1 {
   .timeline-item {
     min-height: 68px;
     padding-right: 12px;
+  }
+
+  .game-options {
+    grid-template-columns: 1fr;
+  }
+
+  .game-result,
+  .game-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .game-actions button {
+    width: 100%;
   }
 
   .topbar-inner {
