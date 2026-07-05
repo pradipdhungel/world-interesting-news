@@ -20,7 +20,7 @@
     <meta name="twitter:description" content="Follow trusted global headlines by country, category, language, and source with original short briefs and source attribution.">
     <meta name="twitter:image" content="/logo.svg">
     <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=saved-2">
+    <link rel="stylesheet" href="/styles.css?v=returning-1">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -175,6 +175,19 @@
           <button id="save-briefing" type="button">Save current briefing</button>
         </div>
         <div class="saved-briefings-grid" id="saved-briefings-grid"></div>
+      </section>
+
+      <section class="section-block returning-feed" id="returning-feed" hidden aria-label="Since your last visit">
+        <div class="returning-feed-header">
+          <div>
+            <span class="section-kicker" id="returning-kicker">Since your last visit</span>
+            <h2 id="returning-title">Catch up on new stories</h2>
+            <p id="returning-summary">When you come back to the same briefing, new stories will appear here first.</p>
+          </div>
+          <button id="returning-dismiss" type="button">Hide this update</button>
+        </div>
+        <div class="returning-feed-meta" id="returning-meta"></div>
+        <div class="returning-feed-grid" id="returning-feed-grid"></div>
       </section>
 
       <section id="error-panel" class="error-panel" hidden></section>
@@ -412,6 +425,6 @@
     <script src="/seo.js?v=saved-2" defer></script>
     <script src="/ads.js?v=ads-1" defer></script>
     <script src="/visit-stats.js?v=saved-2" defer></script>
-    <script src="/app.js?v=saved-2" defer></script>
+    <script src="/app.js?v=returning-1" defer></script>
   </body>
 </html>

@@ -20,7 +20,10 @@ const state = {
   shortStartedAt: 0,
   shortAutoOpened: false,
   userCountry: "",
-  query: ""
+  query: "",
+  returningStories: [],
+  returningLastVisitedAt: "",
+  returningDismissed: false
 };
 
 const countrySelect = document.querySelector("#country-select");
@@ -71,6 +74,13 @@ const savedBriefingsTitle = document.querySelector("#saved-briefings-title");
 const savedBriefingsSummary = document.querySelector("#saved-briefings-summary");
 const savedBriefingsGrid = document.querySelector("#saved-briefings-grid");
 const saveBriefingButton = document.querySelector("#save-briefing");
+const returningFeedSection = document.querySelector("#returning-feed");
+const returningKicker = document.querySelector("#returning-kicker");
+const returningTitle = document.querySelector("#returning-title");
+const returningSummary = document.querySelector("#returning-summary");
+const returningMeta = document.querySelector("#returning-meta");
+const returningFeedGrid = document.querySelector("#returning-feed-grid");
+const returningDismiss = document.querySelector("#returning-dismiss");
 const calendarTitle = document.querySelector("#calendar-title");
 const calendarSummary = document.querySelector("#calendar-summary");
 const calendarStatus = document.querySelector("#calendar-status");
@@ -142,6 +152,8 @@ const SAVED_STORIES_KEY = "worldNewsSavedStories";
 const MAX_SAVED_STORIES = 12;
 const RECENT_STORIES_KEY = "worldNewsRecentStories";
 const MAX_RECENT_STORIES = 6;
+const BRIEFING_SNAPSHOTS_KEY = "worldNewsBriefingSnapshots";
+const MAX_BRIEFING_SNAPSHOTS = 12;
 
 const translations = {
   en: {
@@ -725,6 +737,23 @@ function briefingText(key) {
   return text[key] || fallback[key] || "";
 }
 
+function returningText(key) {
+  const fallback = {
+    kicker: "Since your last visit",
+    title: "Catch up on new stories",
+    intro: "Fresh reporting for this briefing since you last checked in.",
+    summary: "No new stories since your last visit. You are caught up on this briefing.",
+    countOne: "1 new story since {time}",
+    countMany: "{count} new stories since {time}",
+    firstVisit: "When you come back to the same briefing, new stories will appear here first.",
+    hide: "Hide this update",
+    fresh: "New",
+    seen: "Last visit",
+    allCaughtUp: "You are caught up"
+  };
+  return fallback[key] || "";
+}
+
 function readSavedBriefings() {
   try {
     const items = JSON.parse(localStorage.getItem(SAVED_BRIEFINGS_KEY) || "[]");
@@ -748,6 +777,67 @@ function currentBriefingDraft() {
     sort: sortSelect.value || "interesting",
     query: state.query || ""
   };
+}
+
+function briefingSnapshotDraft() {
+  return {
+    country: countrySelect.value || "world",
+    category: categorySelect.value || "top",
+    language: languageSelect.value || "en",
+    query: state.query || ""
+  };
+}
+
+function briefingSnapshotKey(briefing = briefingSnapshotDraft()) {
+  return [briefing.country || "world", briefing.category || "top", briefing.language || "en", (briefing.query || "").trim().toLowerCase()].join("|");
+}
+
+function readBriefingSnapshots() {
+  try {
+    const items = JSON.parse(localStorage.getItem(BRIEFING_SNAPSHOTS_KEY) || "{}");
+    return items && typeof items === "object" ? items : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeBriefingSnapshots(items) {
+  try {
+    const trimmedEntries = Object.entries(items)
+      .sort(([, left], [, right]) => new Date(right?.visitedAt || 0) - new Date(left?.visitedAt || 0))
+      .slice(0, MAX_BRIEFING_SNAPSHOTS);
+    localStorage.setItem(BRIEFING_SNAPSHOTS_KEY, JSON.stringify(Object.fromEntries(trimmedEntries)));
+  } catch {}
+}
+
+function articleSnapshotKey(article) {
+  return article.url || `${article.source?.name || "source"}|${article.title || "story"}`;
+}
+
+function compareWithLastBriefingVisit(articles) {
+  const snapshots = readBriefingSnapshots();
+  const snapshot = snapshots[briefingSnapshotKey()];
+  state.returningLastVisitedAt = snapshot?.visitedAt || "";
+  state.returningDismissed = false;
+
+  if (!snapshot?.articleKeys?.length) {
+    state.returningStories = [];
+    return;
+  }
+
+  const seen = new Set(snapshot.articleKeys);
+  state.returningStories = articles
+    .filter((article) => !seen.has(articleSnapshotKey(article)))
+    .slice(0, 6);
+}
+
+function saveBriefingSnapshot(articles) {
+  const snapshots = readBriefingSnapshots();
+  snapshots[briefingSnapshotKey()] = {
+    visitedAt: new Date().toISOString(),
+    articleKeys: articles.slice(0, 24).map(articleSnapshotKey)
+  };
+  writeBriefingSnapshots(snapshots);
 }
 
 function sameBriefing(a, b) {
@@ -849,6 +939,59 @@ function renderSavedBriefings() {
     card.querySelector(".saved-briefing-open").addEventListener("click", () => applySavedBriefing(briefing));
     card.querySelector(".saved-briefing-remove").addEventListener("click", () => removeSavedBriefing(briefing.id));
     savedBriefingsGrid.appendChild(card);
+  });
+}
+
+function renderReturningFeed() {
+  if (!returningFeedSection || !returningFeedGrid || !returningMeta) return;
+
+  const hasPreviousVisit = Boolean(state.returningLastVisitedAt);
+  const hasStories = state.returningStories.length > 0;
+  const shouldShow = hasPreviousVisit && !state.returningDismissed;
+
+  returningFeedSection.hidden = !shouldShow;
+  returningFeedGrid.innerHTML = "";
+  returningMeta.innerHTML = "";
+
+  if (!shouldShow) return;
+
+  if (returningKicker) returningKicker.textContent = returningText("kicker");
+  if (returningTitle) returningTitle.textContent = hasStories ? returningText("title") : returningText("allCaughtUp");
+  if (returningSummary) {
+    returningSummary.textContent = hasStories ? returningText("intro") : returningText("summary");
+  }
+  if (returningDismiss) returningDismiss.textContent = returningText("hide");
+
+  const lastSeen = formatDate(state.returningLastVisitedAt);
+  const countText = state.returningStories.length === 1
+    ? returningText("countOne").replace("{time}", lastSeen)
+    : returningText("countMany").replace("{count}", String(state.returningStories.length)).replace("{time}", lastSeen);
+  returningMeta.innerHTML = `
+    <span class="returning-count">${hasStories ? countText : returningText("allCaughtUp")}</span>
+    <span class="returning-visit">${hasStories ? briefingLabel(currentBriefingDraft()) : `Last visit ${lastSeen}`}</span>
+  `;
+
+  if (!hasStories) {
+    returningFeedGrid.innerHTML = `<div class="saved-briefing-empty">${returningText("summary")}</div>`;
+    return;
+  }
+
+  state.returningStories.forEach((article) => {
+    const card = document.createElement("article");
+    card.className = "returning-story-card";
+    card.innerHTML = `
+      <div class="returning-story-top">
+        <span>${returningText("fresh")}</span>
+        <strong>${escapeHtml(article.title)}</strong>
+      </div>
+      <p>${escapeHtml(article.summary || "Open the original report for more details and context.")}</p>
+      <div class="returning-story-meta">
+        <small>${escapeHtml(article.source?.name || "Unknown source")}</small>
+        <small>${escapeHtml(formatDate(article.publishedAt))}</small>
+      </div>
+      <a class="saved-briefing-open" href="${articleLink(article)}">Read update</a>
+    `;
+    returningFeedGrid.appendChild(card);
   });
 }
 
@@ -2304,6 +2447,7 @@ function renderArticles() {
   renderCategoryNavigation();
   renderBreakingNews(articles);
   renderSavedBriefings();
+  renderReturningFeed();
   renderMyNews();
   renderSavedStories();
   renderContinueReading();
@@ -2377,9 +2521,11 @@ async function loadNews() {
     state.articles = payload.articles;
     state.updatedAt = payload.updatedAt;
     state.countryName = payload.country;
+    compareWithLastBriefingVisit(payload.articles);
     updateSourceOptions();
     updateHeading(payload);
     renderArticles();
+    saveBriefingSnapshot(payload.articles);
     if (!state.shortAutoOpened && !shortsClosedThisSession()) {
       openShorts({ auto: true, preferUserCountry: true });
     }
@@ -2565,6 +2711,10 @@ continueReadingClear?.addEventListener("click", () => {
   showToast(currentText().clearHistory);
 });
 saveBriefingButton?.addEventListener("click", saveCurrentBriefing);
+returningDismiss?.addEventListener("click", () => {
+  state.returningDismissed = true;
+  renderReturningFeed();
+});
 breakingPrev?.addEventListener("click", () => {
   previousBreakingStory();
   startBreakingRotation();
