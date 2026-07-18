@@ -2806,6 +2806,11 @@ h1 {
   box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
 }
 
+.fifa-wall-chart.is-final-only {
+  grid-template-columns: minmax(0, 820px);
+  justify-content: center;
+}
+
 .wall-poster-head {
   grid-column: 1 / -1;
   display: flex;

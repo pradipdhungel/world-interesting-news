@@ -10,7 +10,6 @@ const state = {
   liveRefreshTimer: null,
   fifaTimer: null,
   fifaCaptains: {},
-  fifaChartMode: "standings",
   fifaTeamPayload: null,
   fifaScorePayload: null,
   calendarDate: new Date(),
@@ -108,8 +107,6 @@ const fifaMatchPulse = document.querySelector("#fifa-match-pulse");
 const fifaScoreGrid = document.querySelector("#fifa-score-grid");
 const fifaChartMeta = document.querySelector("#fifa-chart-meta");
 const fifaTeamChart = document.querySelector("#fifa-team-chart");
-const fifaStandingsView = document.querySelector("#fifa-standings-view");
-const fifaWallView = document.querySelector("#fifa-wall-view");
 const fifaRefresh = document.querySelector("#fifa-refresh");
 const fifaSource = document.querySelector("#fifa-source");
 const pageTitle = document.querySelector("#page-title");
@@ -1746,7 +1743,7 @@ function renderFifaWallChart(groups) {
   const rightGroups = groups.slice(Math.ceil(groups.length / 2));
   const finalStage = isFifaFinalStage();
   if (finalStage) ensureFifaFinalWeekendStyles();
-  fifaTeamChart.className = "fifa-wall-chart";
+  fifaTeamChart.className = `fifa-wall-chart${finalStage ? " is-final-only" : ""}`;
   const wallCenter = finalStage
     ? `
       <div class="wall-center is-final-weekend">
@@ -1787,13 +1784,13 @@ function renderFifaWallChart(groups) {
       <div>
         <span>FIFA World Cup</span>
         <strong>${finalStage ? "Final Weekend Wall Chart" : "Interactive Wall Chart"}</strong>
-        <small>${finalStage ? "The tournament is down to final-stage games. Group tables stay available for context." : "Group tables are live. Knockout bracket stays pending until official qualifiers are confirmed."}</small>
+        <small>${finalStage ? "Only the remaining final-stage matches are shown with live refresh." : "Group tables are live. Knockout bracket stays pending until official qualifiers are confirmed."}</small>
       </div>
-      <em>${groups.length} groups · ${groups.reduce((sum, group) => sum + (group.teams?.length || 0), 0)} teams</em>
+      <em>${finalStage ? "2 final-stage matches" : `${groups.length} groups · ${groups.reduce((sum, group) => sum + (group.teams?.length || 0), 0)} teams`}</em>
     </div>
-    <div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>
+    ${finalStage ? "" : `<div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>`}
     ${wallCenter}
-    <div class="wall-side wall-right">${rightGroups.map(renderWallGroup).join("")}</div>
+    ${finalStage ? "" : `<div class="wall-side wall-right">${rightGroups.map(renderWallGroup).join("")}</div>`}
   `;
 }
 
@@ -1805,51 +1802,14 @@ function renderFifaTeams(payload) {
   const finalStage = isFifaFinalStage();
   fifaChartMeta.textContent = groups.length
     ? `${finalStage ? "Final weekend" : `${payload.totalTeams || 0} country teams`} | ${fifaUpdatedLabel(payload)}`
-    : "No World Cup team standings are available right now.";
-  fifaStandingsView?.classList.toggle("is-active", state.fifaChartMode === "standings");
-  fifaWallView?.classList.toggle("is-active", state.fifaChartMode === "wall");
+    : "No World Cup chart data is available right now.";
 
   if (!groups.length) {
     fifaTeamChart.innerHTML = `<div class="fifa-empty">World Cup team chart is unavailable right now. Check back soon.</div>`;
     return;
   }
 
-  if (state.fifaChartMode === "wall") {
-    renderFifaWallChart(groups);
-    return;
-  }
-
-  fifaTeamChart.className = "fifa-team-chart";
-  groups.forEach((group) => {
-    const maxPoints = Math.max(...group.teams.map((team) => team.points || 0), 0);
-    const section = document.createElement("section");
-    section.className = "fifa-group-card";
-    section.innerHTML = `
-      <div class="fifa-group-title">
-        <h4>${escapeHtml(group.name)}</h4>
-        <span>${group.teams.length} teams</span>
-      </div>
-      <div class="fifa-standings-wrap">
-        <table class="fifa-standings">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Country</th>
-              <th scope="col">P</th>
-              <th scope="col">W</th>
-              <th scope="col">D</th>
-              <th scope="col">L</th>
-              <th scope="col">GD</th>
-              <th scope="col">Pts</th>
-            </tr>
-          </thead>
-          <tbody>${group.teams.map((team) => renderFifaTeamRow(team, maxPoints)).join("")}</tbody>
-        </table>
-      </div>
-      <p class="fifa-group-note">Official group table. Qualification status is shown only after it is confirmed by the competition source.</p>
-    `;
-    fifaTeamChart.appendChild(section);
-  });
+  renderFifaWallChart(groups);
 }
 
 function holidayDateLabel(value) {
@@ -3209,14 +3169,6 @@ savedStoriesClear?.addEventListener("click", () => {
 fifaRefresh?.addEventListener("click", loadFifaScores);
 fifaRefresh?.addEventListener("click", loadFifaTeams);
 calendarRefresh?.addEventListener("click", loadCountryCalendar);
-fifaStandingsView?.addEventListener("click", () => {
-  state.fifaChartMode = "standings";
-  if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
-});
-fifaWallView?.addEventListener("click", () => {
-  state.fifaChartMode = "wall";
-  if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
-});
 continueReadingClear?.addEventListener("click", () => {
   writeRecentStories([]);
   renderContinueReading();
