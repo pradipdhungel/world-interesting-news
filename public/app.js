@@ -1684,6 +1684,8 @@ function ensureFifaFinalWeekendStyles() {
     .wall-final-teams strong{overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
     .wall-final-teams b{font-size:20px}
     .wall-final-teams em{display:grid;width:26px;height:26px;place-items:center;border-radius:50%;background:rgba(255,255,255,.12);color:rgba(255,255,255,.72);font-size:10px;font-style:normal;font-weight:950;text-transform:uppercase}
+    .wall-center.is-final-weekend{align-content:center}
+    .wall-center.is-final-weekend .wall-final-weekend{min-height:280px;align-content:center}
   `;
   document.head.appendChild(style);
 }
@@ -1708,6 +1710,41 @@ function renderFifaWallChart(groups) {
   const finalStage = isFifaFinalStage();
   if (finalStage) ensureFifaFinalWeekendStyles();
   fifaTeamChart.className = "fifa-wall-chart";
+  const wallCenter = finalStage
+    ? `
+      <div class="wall-center is-final-weekend">
+        ${renderFinalWeekendPanel()}
+        <div class="wall-trophy">
+          <span>Road to</span>
+          <strong>Champion</strong>
+          <small>Final-stage games</small>
+        </div>
+      </div>
+    `
+    : `
+      <div class="wall-center">
+        <div class="wall-trophy">
+          <span>Road to</span>
+          <strong>Final</strong>
+          <small>Official qualifiers pending</small>
+        </div>
+        <div class="wall-bracket">
+          ${renderBracketColumn("Round of 32", [["A1", "B2"], ["C1", "D2"], ["E1", "F2"], ["G1", "H2"]])}
+          ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
+          <div class="wall-final-path">
+            <div class="wall-stage">Quarter-finals</div>
+            <div class="wall-stage">Semi-finals</div>
+            <div class="wall-final-box">
+              <span>Final</span>
+              <strong>Champion TBD</strong>
+            </div>
+            <div class="wall-stage">Third place</div>
+          </div>
+          ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
+          ${renderBracketColumn("Round of 32", [["I1", "J2"], ["K1", "L2"], ["Best 3rd", "Group winner"], ["Best 3rd", "Group winner"]])}
+        </div>
+      </div>
+    `;
   fifaTeamChart.innerHTML = `
     <div class="wall-poster-head">
       <div>
@@ -1718,29 +1755,7 @@ function renderFifaWallChart(groups) {
       <em>${groups.length} groups · ${groups.reduce((sum, group) => sum + (group.teams?.length || 0), 0)} teams</em>
     </div>
     <div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>
-    <div class="wall-center">
-      ${finalStage ? renderFinalWeekendPanel() : ""}
-      <div class="wall-trophy">
-        <span>Road to</span>
-        <strong>${finalStage ? "Champion" : "Final"}</strong>
-        <small>${finalStage ? "Final-stage games" : "Official qualifiers pending"}</small>
-      </div>
-      <div class="wall-bracket">
-        ${renderBracketColumn("Round of 32", [["A1", "B2"], ["C1", "D2"], ["E1", "F2"], ["G1", "H2"]])}
-        ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
-        <div class="wall-final-path">
-          <div class="wall-stage">Quarter-finals</div>
-          <div class="wall-stage">Semi-finals</div>
-          <div class="wall-final-box">
-            <span>Final</span>
-            <strong>Champion TBD</strong>
-          </div>
-          <div class="wall-stage">Third place</div>
-        </div>
-        ${renderBracketColumn("Round of 16", [["R32 winner", "R32 winner"], ["R32 winner", "R32 winner"]])}
-        ${renderBracketColumn("Round of 32", [["I1", "J2"], ["K1", "L2"], ["Best 3rd", "Group winner"], ["Best 3rd", "Group winner"]])}
-      </div>
-    </div>
+    ${wallCenter}
     <div class="wall-side wall-right">${rightGroups.map(renderWallGroup).join("")}</div>
   `;
 }
