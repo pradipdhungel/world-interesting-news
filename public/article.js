@@ -23,6 +23,14 @@ const readerAiPanel = document.querySelector("#reader-ai-panel");
 const readerAiContent = document.querySelector("#reader-ai-content");
 const breadcrumbCurrent = document.querySelector("#breadcrumb-current");
 const tagList = document.querySelector("#tag-list");
+const snapshotPublisher = document.querySelector("#snapshot-publisher");
+const snapshotPublisherNote = document.querySelector("#snapshot-publisher-note");
+const snapshotDomain = document.querySelector("#snapshot-domain");
+const snapshotDomainNote = document.querySelector("#snapshot-domain-note");
+const snapshotCoverage = document.querySelector("#snapshot-coverage");
+const snapshotCoverageNote = document.querySelector("#snapshot-coverage-note");
+const snapshotChecklist = document.querySelector("#snapshot-checklist");
+const snapshotHomepage = document.querySelector("#snapshot-homepage");
 const prevArticle = document.querySelector("#prev-article");
 const nextArticle = document.querySelector("#next-article");
 const RECENT_STORIES_KEY = "worldNewsRecentStories";
@@ -48,6 +56,24 @@ function readingTime(article) {
 function articleLink(item) {
   const slug = window.NewsSeo ? NewsSeo.slugify(item.title) : item.id;
   return `/article.html?id=${encodeURIComponent(item.id)}&slug=${encodeURIComponent(slug)}`;
+}
+
+function hostnameFromUrl(value) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function homepageFromArticle(article) {
+  const candidate = article.source?.url || article.url;
+  try {
+    const parsed = new URL(candidate);
+    return `${parsed.protocol}//${parsed.hostname}`;
+  } catch {
+    return "";
+  }
 }
 
 function keywordsForArticle(article) {
@@ -145,6 +171,24 @@ function renderMissing() {
   sourceLink.href = "/";
   sourceLink.textContent = "Back to news";
   if (readerTime) readerTime.textContent = "";
+  if (snapshotPublisher) snapshotPublisher.textContent = "Source unavailable";
+  if (snapshotPublisherNote) snapshotPublisherNote.textContent = "Reload the latest feed to rebuild source context.";
+  if (snapshotDomain) snapshotDomain.textContent = "Unavailable";
+  if (snapshotDomainNote) snapshotDomainNote.textContent = "The original source metadata is not in this browser session.";
+  if (snapshotCoverage) snapshotCoverage.textContent = "No local feed context";
+  if (snapshotCoverageNote) snapshotCoverageNote.textContent = "Open the homepage again to compare this source with nearby coverage.";
+  if (snapshotChecklist) {
+    snapshotChecklist.innerHTML = "";
+    ["Return to the homepage and reload the latest feed.", "Open the original publisher link when the story is available again."].forEach((item) => {
+      const bullet = document.createElement("li");
+      bullet.textContent = item;
+      snapshotChecklist.appendChild(bullet);
+    });
+  }
+  if (snapshotHomepage) {
+    snapshotHomepage.href = "/";
+    snapshotHomepage.textContent = "Return to latest news";
+  }
   if (window.NewsSeo) {
     NewsSeo.setPageMeta({
       title: "Story not found | World Interesting News",
@@ -201,6 +245,31 @@ function buildWhyItMatters(article) {
 function buildContext(article) {
   const sourceName = article.source?.name || "the original publisher";
   return `World Interesting News is showing an original short brief, not a copied full article. For the complete reporting, details, quotes, and updates, continue to ${sourceName} using the source link below.`;
+}
+
+function sourceCoverage(article) {
+  const sourceName = article.source?.name || "";
+  return articles.filter((item) => item.source?.name === sourceName);
+}
+
+function sourceChecklist(article, sameSourceStories, relatedCount) {
+  const checks = [];
+  const updatedAt = article.updatedAt || article.publishedAt;
+  if (updatedAt) {
+    checks.push(`Check the timestamp first. This brief reflects a source update around ${formatDate(updatedAt)}.`);
+  }
+  if (sameSourceStories.length > 1) {
+    const extraStories = sameSourceStories.length - 1;
+    checks.push(`Compare with ${extraStories} other story${extraStories === 1 ? "" : "ies"} from this publisher in the current feed.`);
+  } else {
+    checks.push("Open the original report to confirm the full context, quotes, and any later corrections.");
+  }
+  if (relatedCount > 0) {
+    checks.push(`Use the related section to compare this angle with ${relatedCount} nearby story${relatedCount === 1 ? "" : "ies"} from the same topic or region.`);
+  } else {
+    checks.push("If this story looks important, compare it with a second trusted outlet before sharing.");
+  }
+  return checks;
 }
 
 function storeRecentArticle(article) {
@@ -274,6 +343,51 @@ function renderTags(article) {
   });
 }
 
+function renderSourceSnapshot(article, related) {
+  if (!snapshotPublisher || !snapshotDomain || !snapshotCoverage || !snapshotChecklist || !snapshotHomepage) return;
+
+  const publisher = article.source?.name || "Unknown source";
+  const sameSourceStories = sourceCoverage(article);
+  const domain = hostnameFromUrl(article.url || article.source?.url) || "Direct link unavailable";
+  const homepage = homepageFromArticle(article);
+  const sourceStoryCount = sameSourceStories.length;
+  const categoryMatches = sameSourceStories.filter((item) => item.category === article.category).length;
+
+  snapshotPublisher.textContent = publisher;
+  snapshotPublisherNote.textContent = article.source?.url
+    ? "Publisher homepage is available from the feed metadata."
+    : "The story link is available even if the publisher homepage was not supplied.";
+
+  snapshotDomain.textContent = domain;
+  snapshotDomainNote.textContent = article.url?.startsWith("https://")
+    ? "The original link uses HTTPS."
+    : "Open the original link and confirm the publisher domain before sharing.";
+
+  snapshotCoverage.textContent = sourceStoryCount > 1
+    ? `${sourceStoryCount} stories from this publisher`
+    : "Only this story from the publisher";
+  snapshotCoverageNote.textContent = sourceStoryCount > 1
+    ? `${Math.max(1, categoryMatches)} in ${article.category || "this topic"} within your current feed session.`
+    : "This publisher appears only once in the current feed session.";
+
+  snapshotChecklist.innerHTML = "";
+  sourceChecklist(article, sameSourceStories, related.length).forEach((item) => {
+    const bullet = document.createElement("li");
+    bullet.textContent = item;
+    snapshotChecklist.appendChild(bullet);
+  });
+
+  if (homepage) {
+    snapshotHomepage.href = homepage;
+    snapshotHomepage.textContent = "Visit publisher";
+    snapshotHomepage.removeAttribute("aria-disabled");
+  } else {
+    snapshotHomepage.href = article.url || "/";
+    snapshotHomepage.textContent = "Open story source";
+    snapshotHomepage.setAttribute("aria-disabled", "true");
+  }
+}
+
 function renderArticleNavigation(article) {
   const index = articles.findIndex((item) => item.id === article.id);
   const previous = articles[index - 1];
@@ -343,8 +457,10 @@ function renderArticle() {
   if (shareX) {
     shareX.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}`;
   }
+  const related = relatedStories(article);
   renderRelated(article);
   renderTags(article);
+  renderSourceSnapshot(article, related);
   renderArticleNavigation(article);
   updateSeo(article);
 
