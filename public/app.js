@@ -12,6 +12,7 @@ const state = {
   fifaCaptains: {},
   fifaChartMode: "standings",
   fifaTeamPayload: null,
+  fifaScorePayload: null,
   calendarDate: new Date(),
   shorts: [],
   shortIndex: 0,
@@ -1217,6 +1218,52 @@ function matchStatusClass(match) {
   return "is-upcoming";
 }
 
+function matchStageLabel(match) {
+  const stage = `${match.stage || ""} ${match.name || ""}`.toLowerCase();
+  if (stage.includes("3rd") || stage.includes("third")) return "3rd-place match";
+  if (stage.includes("final")) return "Final";
+  if (stage.includes("semi")) return "Semifinal";
+  if (match.live) return "Live";
+  if (match.completed) return "Final";
+  return "Fixture";
+}
+
+function isFifaFinalStage(payload = state.fifaScorePayload) {
+  const stageText = `${payload?.stageName || ""} ${(payload?.matches || []).map((match) => `${match.stage || ""} ${match.name || ""}`).join(" ")}`.toLowerCase();
+  const calendarText = (payload?.calendar || [])
+    .filter((entry) => isFinalWeekendEntry(entry))
+    .map((entry) => `${entry.label} ${entry.detail}`)
+    .join(" ")
+    .toLowerCase();
+  return /3rd-place|third-place|final/.test(stageText) || Boolean(calendarText);
+}
+
+function isFinalWeekendEntry(entry) {
+  const label = String(entry?.label || "").toLowerCase();
+  return label === "final" || label.includes("3rd-place") || label.includes("third-place");
+}
+
+function finalWeekendEntries(payload = state.fifaScorePayload) {
+  const entries = (payload?.calendar || [])
+    .filter((entry) => isFinalWeekendEntry(entry))
+    .map((entry) => ({
+      label: entry.label,
+      detail: entry.detail || finalDateLabel(entry.startDate),
+      date: entry.startDate
+    }));
+  if (entries.length) return entries;
+  return [
+    { label: "3rd-Place Match", detail: "Jul 18", date: "" },
+    { label: "Final", detail: "Jul 19", date: "" }
+  ];
+}
+
+function finalDateLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function renderTeam(team, side) {
   return `
     <div class="fifa-team ${side}">
@@ -1264,6 +1311,8 @@ function fifaMomentumShare(match) {
 function fifaPulseLabel(match) {
   if (match.live) return "Live Stadium Pulse";
   if (match.completed) return "Final Whistle";
+  const stageLabel = matchStageLabel(match);
+  if (/final|3rd-place/i.test(stageLabel)) return "Final Weekend Spotlight";
   return "Next Match Spotlight";
 }
 
@@ -1444,18 +1493,23 @@ function renderCaptainSpotlight(match) {
 function renderFifaScores(payload) {
   if (!fifaScoreGrid || !fifaStatus) return;
   fifaScoreGrid.innerHTML = "";
+  state.fifaScorePayload = payload;
   const matches = payload.matches || [];
   const liveCount = matches.filter((match) => match.live).length;
+  const finalStage = isFifaFinalStage(payload);
 
-  if (fifaTitle) fifaTitle.textContent = payload.league || "FIFA World Cup scores";
+  if (fifaTitle) fifaTitle.textContent = finalStage ? "World Cup Final Weekend" : payload.league || "FIFA World Cup scores";
   if (fifaSummary) {
-    fifaSummary.textContent = liveCount
-      ? `${liveCount} match${liveCount === 1 ? " is" : "es are"} live now. Scores refresh automatically.`
-      : "Live, upcoming, and final FIFA matches refresh automatically.";
+    fifaSummary.textContent = finalStage
+      ? "Only the final-stage games remain. Follow the 3rd-place match and the championship final with live refresh."
+      : liveCount
+        ? `${liveCount} match${liveCount === 1 ? " is" : "es are"} live now. Scores refresh automatically.`
+        : "Live, upcoming, and final FIFA matches refresh automatically.";
   }
   fifaStatus.textContent = fifaUpdatedLabel(payload);
   if (fifaSource && payload.sourceUrl) fifaSource.href = payload.sourceUrl;
   renderFifaMatchPulse(matches);
+  if (state.fifaTeamPayload) renderFifaTeams(state.fifaTeamPayload);
 
   if (!matches.length) {
     fifaScoreGrid.innerHTML = `<div class="fifa-empty">No FIFA matches are listed right now. Check back soon for the next fixture.</div>`;
@@ -1467,7 +1521,7 @@ function renderFifaScores(payload) {
     card.className = `fifa-card ${matchStatusClass(match)}`;
     card.innerHTML = `
       <div class="fifa-card-top">
-        <span>${match.live ? "Live" : match.completed ? "Final" : "Fixture"}</span>
+        <span>${escapeHtml(matchStageLabel(match))}</span>
         <time datetime="${match.date}">${matchTimeLabel(match)}</time>
       </div>
       ${renderTeam(match.home, "home")}
@@ -1556,6 +1610,84 @@ function renderWallSlot(label) {
   `;
 }
 
+function matchForFinalEntry(entry, matches) {
+  const label = (entry.label || "").toLowerCase();
+  return matches.find((match) => {
+    const text = `${match.stage || ""} ${match.name || ""} ${match.shortName || ""}`.toLowerCase();
+    if (label.includes("3rd") || label.includes("third")) return text.includes("3rd") || text.includes("third");
+    if (label.includes("final")) return text.includes("final") && !text.includes("semi") && !text.includes("3rd");
+    return false;
+  });
+}
+
+function renderFinalWeekendPanel(payload = state.fifaScorePayload) {
+  const matches = payload?.matches || [];
+  const entries = finalWeekendEntries(payload);
+  return `
+    <div class="wall-final-weekend" aria-label="World Cup final weekend games">
+      <div class="wall-final-weekend-title">
+        <span>Final games only</span>
+        <strong>Final Weekend</strong>
+      </div>
+      <div class="wall-final-games">
+        ${entries.map((entry) => {
+          const match = matchForFinalEntry(entry, matches);
+          if (!match) {
+            return `
+              <article class="wall-final-game is-pending">
+                <span>${escapeHtml(entry.label)}</span>
+                <strong>Teams pending</strong>
+                <small>${escapeHtml(entry.detail || "Schedule TBA")}</small>
+              </article>
+            `;
+          }
+          return `
+            <article class="wall-final-game ${matchStatusClass(match)}">
+              <span>${escapeHtml(matchStageLabel(match))}</span>
+              <div class="wall-final-teams">
+                <img src="${match.home.logo || "/favicon.svg"}" alt="" loading="lazy">
+                <strong>${escapeHtml(match.home.shortName || match.home.name)}</strong>
+                <b>${fifaScoreNumber(match.home)}</b>
+                <em>vs</em>
+                <b>${fifaScoreNumber(match.away)}</b>
+                <strong>${escapeHtml(match.away.shortName || match.away.name)}</strong>
+                <img src="${match.away.logo || "/favicon.svg"}" alt="" loading="lazy">
+              </div>
+              <small>${escapeHtml(matchTimeLabel(match))} · ${escapeHtml(match.venue || "Venue TBA")}</small>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function ensureFifaFinalWeekendStyles() {
+  if (document.querySelector("#fifa-final-weekend-styles")) return;
+  const style = document.createElement("style");
+  style.id = "fifa-final-weekend-styles";
+  style.textContent = `
+    .wall-final-weekend{display:grid;gap:12px;padding:14px;border:1px solid rgba(255,255,255,.28);border-radius:18px;background:rgba(15,23,42,.86);color:#fff;box-shadow:0 18px 38px rgba(15,23,42,.28)}
+    .wall-final-weekend-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+    .wall-final-weekend-title span{color:#fecaca;font-size:11px;font-weight:950;text-transform:uppercase}
+    .wall-final-weekend-title strong{font-family:Georgia,"Times New Roman",serif;font-size:28px;line-height:1}
+    .wall-final-games{display:grid;gap:10px}
+    .wall-final-game{display:grid;gap:9px;padding:12px;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(255,255,255,.1)}
+    .wall-final-game.is-upcoming{border-color:rgba(250,204,21,.46);background:linear-gradient(135deg,rgba(250,204,21,.14),rgba(255,255,255,.08))}
+    .wall-final-game.is-live{border-color:rgba(248,113,113,.68);box-shadow:0 0 0 1px rgba(248,113,113,.2)}
+    .wall-final-game.is-pending{border-style:dashed;color:rgba(255,255,255,.72)}
+    .wall-final-game>span{color:#fef08a;font-size:11px;font-weight:950;text-transform:uppercase}
+    .wall-final-game>strong{font-size:20px}
+    .wall-final-game small{color:rgba(255,255,255,.68);font-size:11px;font-weight:850}
+    .wall-final-teams{display:grid;grid-template-columns:28px minmax(0,1fr) auto 26px auto minmax(0,1fr) 28px;gap:8px;align-items:center}
+    .wall-final-teams img{width:28px;height:28px;border-radius:50%;object-fit:contain;background:#fff;padding:2px}
+    .wall-final-teams strong{overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+    .wall-final-teams b{font-size:20px}
+    .wall-final-teams em{display:grid;width:26px;height:26px;place-items:center;border-radius:50%;background:rgba(255,255,255,.12);color:rgba(255,255,255,.72);font-size:10px;font-style:normal;font-weight:950;text-transform:uppercase}
+  `;
+  document.head.appendChild(style);
+}
+
 function renderBracketColumn(title, labels) {
   return `
     <div class="wall-round">
@@ -1573,22 +1705,25 @@ function renderBracketColumn(title, labels) {
 function renderFifaWallChart(groups) {
   const leftGroups = groups.slice(0, Math.ceil(groups.length / 2));
   const rightGroups = groups.slice(Math.ceil(groups.length / 2));
+  const finalStage = isFifaFinalStage();
+  if (finalStage) ensureFifaFinalWeekendStyles();
   fifaTeamChart.className = "fifa-wall-chart";
   fifaTeamChart.innerHTML = `
     <div class="wall-poster-head">
       <div>
         <span>FIFA World Cup</span>
-        <strong>Interactive Wall Chart</strong>
-        <small>Group tables are live. Knockout bracket stays pending until official qualifiers are confirmed.</small>
+        <strong>${finalStage ? "Final Weekend Wall Chart" : "Interactive Wall Chart"}</strong>
+        <small>${finalStage ? "The tournament is down to final-stage games. Group tables stay available for context." : "Group tables are live. Knockout bracket stays pending until official qualifiers are confirmed."}</small>
       </div>
       <em>${groups.length} groups · ${groups.reduce((sum, group) => sum + (group.teams?.length || 0), 0)} teams</em>
     </div>
     <div class="wall-side wall-left">${leftGroups.map(renderWallGroup).join("")}</div>
     <div class="wall-center">
+      ${finalStage ? renderFinalWeekendPanel() : ""}
       <div class="wall-trophy">
         <span>Road to</span>
-        <strong>Final</strong>
-        <small>Official qualifiers pending</small>
+        <strong>${finalStage ? "Champion" : "Final"}</strong>
+        <small>${finalStage ? "Final-stage games" : "Official qualifiers pending"}</small>
       </div>
       <div class="wall-bracket">
         ${renderBracketColumn("Round of 32", [["A1", "B2"], ["C1", "D2"], ["E1", "F2"], ["G1", "H2"]])}
@@ -1615,8 +1750,9 @@ function renderFifaTeams(payload) {
   const groups = payload.groups || [];
   fifaTeamChart.innerHTML = "";
   state.fifaTeamPayload = payload;
+  const finalStage = isFifaFinalStage();
   fifaChartMeta.textContent = groups.length
-    ? `${payload.totalTeams || 0} country teams | ${fifaUpdatedLabel(payload)}`
+    ? `${finalStage ? "Final weekend" : `${payload.totalTeams || 0} country teams`} | ${fifaUpdatedLabel(payload)}`
     : "No World Cup team standings are available right now.";
   fifaStandingsView?.classList.toggle("is-active", state.fifaChartMode === "standings");
   fifaWallView?.classList.toggle("is-active", state.fifaChartMode === "wall");

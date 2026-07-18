@@ -516,6 +516,7 @@ function normalizeFifaEvent(event) {
     status: statusType.state || "pre",
     statusLabel: statusType.shortDetail || statusType.detail || statusType.description || "Scheduled",
     clock: status.displayClock || "",
+    stage: competition.altGameNote || event.season?.slug || "",
     completed: Boolean(statusType.completed),
     live: statusType.state === "in",
     venue: competition.venue?.fullName || competition.venue?.displayName || event.venue?.displayName || "",
@@ -524,6 +525,20 @@ function normalizeFifaEvent(event) {
     away: teamShape(away),
     link
   };
+}
+
+function normalizeFifaCalendar(leagues = []) {
+  return leagues
+    .flatMap((league) => league.calendar || [])
+    .flatMap((calendar) => calendar.entries || [])
+    .map((entry) => ({
+      label: entry.label || "",
+      detail: entry.detail || "",
+      value: entry.value || "",
+      startDate: entry.startDate || "",
+      endDate: entry.endDate || ""
+    }))
+    .filter((entry) => entry.label);
 }
 
 function statValue(stats, names, fallback = 0) {
@@ -589,6 +604,8 @@ async function handleFifaScores(request, response) {
     const matches = (scoreboard.events || []).map(normalizeFifaEvent);
     const payload = {
       league: league.season?.displayName || league.name || "FIFA World Cup",
+      stageName: league.season?.type?.name || "",
+      calendar: normalizeFifaCalendar(scoreboard.leagues || []),
       date: scoreboard.day?.date || new Date().toISOString().slice(0, 10),
       updatedAt: new Date().toISOString(),
       source: "ESPN",
