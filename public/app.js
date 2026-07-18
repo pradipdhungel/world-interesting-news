@@ -1264,6 +1264,40 @@ function finalDateLabel(value) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function confirmedWorldCupFinalMatch() {
+  return {
+    id: "fifa-2026-final-confirmed",
+    name: "Spain v Argentina",
+    shortName: "ESP v ARG",
+    date: "2026-07-19T19:00:00Z",
+    status: "pre",
+    statusLabel: "Final",
+    clock: "",
+    stage: "FIFA World Cup Final",
+    completed: false,
+    live: false,
+    venue: "New York New Jersey Stadium",
+    broadcasts: [],
+    home: {
+      name: "Spain",
+      shortName: "Spain",
+      abbreviation: "ESP",
+      logo: "https://a.espncdn.com/i/teamlogos/countries/500/esp.png",
+      score: 0,
+      winner: false
+    },
+    away: {
+      name: "Argentina",
+      shortName: "Argentina",
+      abbreviation: "ARG",
+      logo: "https://a.espncdn.com/i/teamlogos/countries/500/arg.png",
+      score: 0,
+      winner: false
+    },
+    link: "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/final-live-watch-teams-tickets"
+  };
+}
+
 function renderTeam(team, side) {
   return `
     <div class="fifa-team ${side}">
@@ -1612,12 +1646,15 @@ function renderWallSlot(label) {
 
 function matchForFinalEntry(entry, matches) {
   const label = (entry.label || "").toLowerCase();
-  return matches.find((match) => {
+  const match = matches.find((match) => {
     const text = `${match.stage || ""} ${match.name || ""} ${match.shortName || ""}`.toLowerCase();
     if (label.includes("3rd") || label.includes("third")) return text.includes("3rd") || text.includes("third");
     if (label.includes("final")) return text.includes("final") && !text.includes("semi") && !text.includes("3rd");
     return false;
   });
+  if (match) return match;
+  if (label === "final") return confirmedWorldCupFinalMatch();
+  return null;
 }
 
 function renderFinalWeekendPanel(payload = state.fifaScorePayload) {
