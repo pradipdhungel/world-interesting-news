@@ -1387,6 +1387,13 @@ h1 {
   gap: 18px;
 }
 
+.saved-briefings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .saved-briefings-header h2 {
   margin: 4px 0 8px;
   font-family: Georgia, "Times New Roman", serif;
@@ -1403,20 +1410,39 @@ h1 {
 }
 
 #save-briefing,
-.saved-briefing-open {
+#share-briefing,
+.saved-briefing-open,
+.saved-briefing-share {
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid var(--accent);
   border-radius: 999px;
-  background: var(--accent);
-  color: white;
   cursor: pointer;
   font-weight: 900;
+}
+
+#save-briefing,
+.saved-briefing-open {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
 }
 
 #save-briefing:hover,
 .saved-briefing-open:hover {
   background: var(--accent-strong);
+}
+
+#share-briefing,
+.saved-briefing-share {
+  border: 1px solid color-mix(in srgb, var(--teal) 38%, var(--line));
+  background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+  color: var(--teal);
+}
+
+#share-briefing:hover,
+.saved-briefing-share:hover {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 18%, var(--surface));
 }
 
 .saved-briefings-grid {
@@ -1616,6 +1642,7 @@ h1 {
 
 .saved-briefing-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
