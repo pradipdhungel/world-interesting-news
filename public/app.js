@@ -117,6 +117,10 @@ const smartBriefing = document.querySelector("#smart-briefing");
 const smartBriefingSummary = document.querySelector("#smart-briefing-summary");
 const smartBriefingGrid = document.querySelector("#smart-briefing-grid");
 const smartBriefingCta = document.querySelector("#smart-briefing-cta");
+const coverageWatch = document.querySelector("#coverage-watch");
+const coverageWatchSummary = document.querySelector("#coverage-watch-summary");
+const coverageWatchGrid = document.querySelector("#coverage-watch-grid");
+const coverageWatchCta = document.querySelector("#coverage-watch-cta");
 const newsTimeline = document.querySelector("#news-timeline");
 const newsTimelineSummary = document.querySelector("#news-timeline-summary");
 const newsTimelineList = document.querySelector("#news-timeline-list");
@@ -2392,6 +2396,97 @@ function generatedImageLabel(article) {
   return keywords.length ? keywords.join(" / ") : normalizeCategory(article.category);
 }
 
+function cleanCoverageTitle(value) {
+  return String(value || "")
+    .replace(/\s+-\s+[^-]+$/, "")
+    .replace(/\s+\|\s+.+$/, "")
+    .trim();
+}
+
+function titleSignal(article) {
+  return cleanCoverageTitle(article?.title)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function storySignalTokens(article) {
+  const words = `${titleSignal(article)} ${article?.summary || ""} ${article?.category || ""} ${article?.country || ""}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 3 && !stopWords.has(word));
+  return [...new Set(words)].slice(0, 10);
+}
+
+function sharedTokenCount(first, second) {
+  let count = 0;
+  first.forEach((token) => {
+    if (second.has(token)) count += 1;
+  });
+  return count;
+}
+
+function coverageClusters(articles) {
+  const clusters = [];
+  const candidates = sortArticles(articles).slice(0, 18);
+
+  candidates.forEach((article) => {
+    const tokenSet = new Set(storySignalTokens(article));
+    if (!tokenSet.size) return;
+
+    let bestCluster = null;
+    let bestScore = 0;
+
+    clusters.forEach((cluster) => {
+      const shared = sharedTokenCount(tokenSet, cluster.tokens);
+      const sameCategory = article.category === cluster.category;
+      const sameCountry = article.countryCode === cluster.countryCode;
+      const score = (shared * 3) + (sameCategory ? 2 : 0) + (sameCountry ? 1 : 0);
+      const qualifies = shared >= 2 || (shared >= 1 && sameCategory && cluster.items.length < 3);
+      if (qualifies && score > bestScore) {
+        bestCluster = cluster;
+        bestScore = score;
+      }
+    });
+
+    if (bestCluster) {
+      bestCluster.items.push(article);
+      tokenSet.forEach((token) => bestCluster.tokens.add(token));
+      return;
+    }
+
+    clusters.push({
+      lead: article,
+      items: [article],
+      tokens: tokenSet,
+      category: article.category,
+      countryCode: article.countryCode
+    });
+  });
+
+  return clusters
+    .map((cluster) => {
+      const sources = [...new Set(cluster.items.map((item) => item.source?.name).filter(Boolean))];
+      return {
+        ...cluster,
+        sources,
+        countries: [...new Set(cluster.items.map((item) => item.country).filter(Boolean))],
+        keywords: [...cluster.tokens].slice(0, 4)
+      };
+    })
+    .filter((cluster) => cluster.items.length >= 2 && cluster.sources.length >= 2)
+    .sort((a, b) => {
+      const sourceGap = b.sources.length - a.sources.length;
+      if (sourceGap) return sourceGap;
+      const itemGap = b.items.length - a.items.length;
+      if (itemGap) return itemGap;
+      return (b.lead?.interestScore || 0) - (a.lead?.interestScore || 0);
+    })
+    .slice(0, 3);
+}
+
 function generatedImageBackground(article) {
   const [primary, secondary, deep] = categoryPalettes[article.category] || categoryPalettes.top;
   const svg = `
@@ -2440,6 +2535,8 @@ function setLoading() {
   if (categorySections) categorySections.innerHTML = "";
   if (smartBriefingGrid) smartBriefingGrid.innerHTML = "";
   if (smartBriefing) smartBriefing.hidden = true;
+  if (coverageWatchGrid) coverageWatchGrid.innerHTML = "";
+  if (coverageWatch) coverageWatch.hidden = true;
   if (newsTimelineList) newsTimelineList.innerHTML = "";
   if (newsTimeline) newsTimeline.hidden = true;
   if (newsGameBoard) newsGameBoard.innerHTML = "";
@@ -2684,6 +2781,61 @@ function renderSmartBriefing(articles) {
       `).join("")}
     </div>
   `;
+}
+
+function renderCoverageWatch(articles) {
+  if (!coverageWatch || !coverageWatchGrid) return;
+  coverageWatchGrid.innerHTML = "";
+
+  const clusters = coverageClusters(articles);
+  if (!clusters.length) {
+    coverageWatch.hidden = true;
+    return;
+  }
+
+  coverageWatch.hidden = false;
+  const totalSources = [...new Set(clusters.flatMap((cluster) => cluster.sources))].length;
+  if (coverageWatchSummary) {
+    coverageWatchSummary.textContent = `${clusters.length} topics have multi-publisher coverage across ${totalSources} sources in this briefing.`;
+  }
+  if (coverageWatchCta) coverageWatchCta.href = articleLink(clusters[0].lead);
+
+  coverageWatchGrid.innerHTML = clusters.map((cluster) => {
+    const clusterMeta = [
+      normalizeCategory(cluster.lead.category),
+      cluster.countries.length > 1 ? `${cluster.countries.length} regions` : (cluster.countries[0] || "World"),
+      freshnessLabel(cluster.items)
+    ].join(" Â· ");
+    const sourceLabel = `${cluster.sources.length} source${cluster.sources.length === 1 ? "" : "s"}`;
+    const storyLabel = `${cluster.items.length} stor${cluster.items.length === 1 ? "y" : "ies"}`;
+    return `
+      <article class="coverage-card">
+        <div class="coverage-card-top">
+          <span class="coverage-strength">${escapeHtml(sourceLabel)}</span>
+          <small>${escapeHtml(storyLabel)}</small>
+        </div>
+        <a class="coverage-lead" href="${escapeHtml(articleLink(cluster.lead))}">
+          <strong>${escapeHtml(cluster.lead.title)}</strong>
+          <p>${escapeHtml(cluster.lead.summary || "Open the lead story to compare the reporting angle and original publisher context.")}</p>
+        </a>
+        <div class="coverage-keywords">
+          ${cluster.keywords.map((keyword) => `<a href="/?q=${encodeURIComponent(keyword)}">${escapeHtml(keyword)}</a>`).join("")}
+        </div>
+        <div class="coverage-meta">${escapeHtml(clusterMeta)}</div>
+        <div class="coverage-sources">
+          ${cluster.sources.slice(0, 4).map((sourceName) => `<span>${escapeHtml(sourceName)}</span>`).join("")}
+        </div>
+        <div class="coverage-links">
+          ${cluster.items.slice(0, 3).map((item) => `
+            <a href="${escapeHtml(articleLink(item))}">
+              <strong>${escapeHtml(item.source?.name || "Source")}</strong>
+              <span>${escapeHtml(cleanCoverageTitle(item.title).slice(0, 88) || item.title)}</span>
+            </a>
+          `).join("")}
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function timelineBucket(article) {
@@ -2946,6 +3098,7 @@ function renderArticles() {
   renderCategoryNavigation();
   renderBreakingNews(articles);
   renderSmartBriefing(articles);
+  renderCoverageWatch(articles);
   renderNewsTimeline(articles);
   renderNewsGame(articles);
   renderSavedBriefings();
@@ -2960,6 +3113,7 @@ function renderArticles() {
     if (trendingList) trendingList.innerHTML = "";
     if (categorySections) categorySections.innerHTML = "";
     if (smartBriefing) smartBriefing.hidden = true;
+    if (coverageWatch) coverageWatch.hidden = true;
     if (newsTimeline) newsTimeline.hidden = true;
     if (newsGame) newsGame.hidden = true;
     grid.innerHTML = `<div class="empty-state">${currentText().noStories}</div>`;

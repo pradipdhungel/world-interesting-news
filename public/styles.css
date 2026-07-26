@@ -1036,6 +1036,186 @@ h1 {
   font-weight: 800;
 }
 
+.coverage-watch[hidden] {
+  display: none;
+}
+
+.coverage-watch {
+  margin-top: 18px;
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--blue) 14%, transparent), transparent 34%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--gold) 12%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-raised) 92%, transparent), var(--surface));
+  box-shadow: var(--soft-shadow);
+}
+
+.coverage-watch-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.coverage-watch-header h2 {
+  margin: 4px 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.04;
+}
+
+.coverage-watch-header p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+#coverage-watch-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  background: var(--blue);
+  color: white;
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#coverage-watch-cta:hover {
+  filter: brightness(0.95);
+}
+
+.coverage-watch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.coverage-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--blue) 7%, transparent), transparent 68%),
+    color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+}
+
+.coverage-card-top,
+.coverage-sources,
+.coverage-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coverage-card-top {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.coverage-strength,
+.coverage-sources span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.coverage-strength {
+  background: color-mix(in srgb, var(--blue) 14%, var(--surface));
+  color: var(--blue);
+}
+
+.coverage-card-top small,
+.coverage-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.coverage-lead {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.coverage-lead strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.22;
+}
+
+.coverage-lead p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.coverage-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coverage-keywords a,
+.coverage-sources span {
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.coverage-keywords a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.coverage-links {
+  display: grid;
+}
+
+.coverage-links a {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.coverage-links a strong {
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.coverage-links a span {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .news-timeline[hidden] {
   display: none;
 }
@@ -4863,6 +5043,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .coverage-watch-grid {
+    grid-template-columns: 1fr;
+  }
+
   .smart-stack {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4914,6 +5098,7 @@ h1 {
   .fifa-header,
   .my-news-header,
   .smart-briefing-header,
+  .coverage-watch-header,
   .news-timeline-header,
   .news-game-header {
     flex-direction: column;
@@ -4925,6 +5110,7 @@ h1 {
   }
 
   #smart-briefing-cta,
+  #coverage-watch-cta,
   .news-timeline-header a {
     width: fit-content;
   }
