@@ -20,7 +20,7 @@
     <meta name="twitter:description" content="Follow trusted global headlines by country, category, language, and source with original short briefs and source attribution.">
     <meta name="twitter:image" content="/logo.svg">
     <link rel="preload" href="/logo.svg" as="image" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles.css?v=coverage-watch-1">
+    <link rel="stylesheet" href="/styles.css?v=briefing-radar-1">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -227,6 +227,16 @@
             <button id="share-briefing" type="button">Share this briefing</button>
             <button id="save-briefing" type="button">Save current briefing</button>
           </div>
+        </div>
+        <div class="briefing-radar" id="briefing-radar" hidden>
+          <div class="briefing-radar-header">
+            <div>
+              <span class="section-kicker">Radar</span>
+              <h3>Which saved briefings changed</h3>
+            </div>
+            <p id="briefing-radar-summary">Checking your saved briefings for fresh stories.</p>
+          </div>
+          <div class="briefing-radar-grid" id="briefing-radar-grid" aria-live="polite"></div>
         </div>
         <div class="saved-briefings-grid" id="saved-briefings-grid"></div>
       </section>
@@ -472,9 +482,9 @@
       </div>
     </div>
 
-    <script src="/seo.js?v=coverage-watch-1" defer></script>
+    <script src="/seo.js?v=briefing-radar-1" defer></script>
     <script src="/ads.js?v=ads-1" defer></script>
-    <script src="/visit-stats.js?v=coverage-watch-1" defer></script>
-    <script src="/app.js?v=coverage-watch-1" defer></script>
+    <script src="/visit-stats.js?v=briefing-radar-1" defer></script>
+    <script src="/app.js?v=briefing-radar-1" defer></script>
   </body>
 </html>

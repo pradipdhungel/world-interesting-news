@@ -24,6 +24,9 @@ const state = {
   returningStories: [],
   returningLastVisitedAt: "",
   returningDismissed: false,
+  briefingRadarItems: [],
+  briefingRadarLoading: false,
+  briefingRadarRequestId: 0,
   gameArticles: [],
   gameIndex: 0,
   gameScore: 0,
@@ -77,6 +80,9 @@ const savedBriefingsKicker = document.querySelector("#saved-briefings-kicker");
 const savedBriefingsTitle = document.querySelector("#saved-briefings-title");
 const savedBriefingsSummary = document.querySelector("#saved-briefings-summary");
 const savedBriefingsGrid = document.querySelector("#saved-briefings-grid");
+const briefingRadar = document.querySelector("#briefing-radar");
+const briefingRadarSummary = document.querySelector("#briefing-radar-summary");
+const briefingRadarGrid = document.querySelector("#briefing-radar-grid");
 const shareBriefingButton = document.querySelector("#share-briefing");
 const saveBriefingButton = document.querySelector("#save-briefing");
 const returningFeedSection = document.querySelector("#returning-feed");
@@ -748,7 +754,22 @@ function briefingText(key) {
     briefingShareFallback: "Copy this briefing link: ",
     activeBriefing: "Active",
     briefingBadge: "Briefing",
-    searchBriefing: "Search"
+    searchBriefing: "Search",
+    radarTitle: "Which saved briefings changed",
+    radarLoading: "Checking your saved briefings for fresh stories.",
+    radarEmpty: "Save a few briefings and this radar will show where the news moved first.",
+    radarCaughtUp: "All saved briefings are caught up right now.",
+    radarUpdated: "{count} saved briefings have fresh coverage waiting.",
+    radarReady: "Saved briefings are ready to reopen with one tap.",
+    radarError: "Some saved briefings could not be checked right now.",
+    radarNewStoriesOne: "1 new story",
+    radarNewStoriesMany: "{count} new stories",
+    radarNoChanges: "Caught up",
+    radarNeverChecked: "Not checked yet",
+    radarVisited: "Last visit {time}",
+    radarOpen: "Catch up",
+    radarOpenFirst: "Open first check",
+    radarRefresh: "Updated {time}"
   };
   const text = currentText();
   return text[key] || fallback[key] || "";
@@ -803,6 +824,15 @@ function briefingSnapshotDraft() {
     category: categorySelect.value || "top",
     language: languageSelect.value || "en",
     query: state.query || ""
+  };
+}
+
+function briefingSnapshotDraftFromBriefing(briefing = {}) {
+  return {
+    country: briefing.country || "world",
+    category: briefing.category || "top",
+    language: briefing.language || "en",
+    query: briefing.query || ""
   };
 }
 
@@ -878,6 +908,201 @@ function briefingLabel(briefing) {
   return query ? `${country} ${category}: ${query}` : `${country} ${category}`;
 }
 
+function filterArticlesForBriefing(articles, briefing) {
+  const sourceName = briefing.source || "all";
+  if (sourceName === "all") return [...articles];
+  return articles.filter((article) => article.source?.name === sourceName);
+}
+
+function sortArticlesByValue(articles, sort = "interesting") {
+  const sorted = [...articles];
+
+  if (sort === "newest") {
+    sorted.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+  } else if (sort === "source") {
+    sorted.sort((a, b) => (a.source?.name || "").localeCompare(b.source?.name || ""));
+  } else {
+    sorted.sort((a, b) => (b.interestScore || 0) - (a.interestScore || 0));
+  }
+
+  return sorted;
+}
+
+function articlesForBriefing(articles, briefing) {
+  return sortArticlesByValue(filterArticlesForBriefing(articles, briefing), briefing.sort || "interesting");
+}
+
+async function fetchArticlesForBriefing(briefing) {
+  if (sameBriefing(briefing, currentBriefingDraft()) && state.articles.length) {
+    return {
+      articles: articlesForBriefing(state.articles, briefing),
+      updatedAt: state.updatedAt || new Date().toISOString()
+    };
+  }
+
+  const params = new URLSearchParams({
+    country: briefing.country || "world",
+    category: briefing.category || "top",
+    language: briefing.language || "en",
+    limit: "30"
+  });
+  if (briefing.query) params.set("q", briefing.query);
+
+  const response = await fetch(`/api/news?${params.toString()}`);
+  const payload = await response.json();
+  if (!response.ok || !Array.isArray(payload.articles)) {
+    throw new Error(payload.detail || payload.error || "Briefing radar failed");
+  }
+
+  return {
+    articles: articlesForBriefing(payload.articles, briefing),
+    updatedAt: payload.updatedAt || new Date().toISOString()
+  };
+}
+
+function briefingRadarStatusText(item) {
+  if (item.error) return briefingText("radarError");
+  if (!item.lastVisitedAt) return briefingText("radarNeverChecked");
+  return briefingText("radarVisited").replace("{time}", formatDate(item.lastVisitedAt));
+}
+
+function briefingRadarCountText(item) {
+  if (item.error) return briefingText("radarError");
+  if (!item.lastVisitedAt) return briefingText("radarNeverChecked");
+  if (!item.newCount) return briefingText("radarNoChanges");
+  return item.newCount === 1
+    ? briefingText("radarNewStoriesOne")
+    : briefingText("radarNewStoriesMany").replace("{count}", String(item.newCount));
+}
+
+function briefingRadarActionText(item) {
+  return item.lastVisitedAt ? briefingText("radarOpen") : briefingText("radarOpenFirst");
+}
+
+function compareBriefingRadarItems(left, right) {
+  if ((right.newCount || 0) !== (left.newCount || 0)) return (right.newCount || 0) - (left.newCount || 0);
+  if (Boolean(right.error) !== Boolean(left.error)) return Number(Boolean(left.error)) - Number(Boolean(right.error));
+  return new Date(right.updatedAt || 0) - new Date(left.updatedAt || 0);
+}
+
+function renderBriefingRadar() {
+  if (!briefingRadar || !briefingRadarGrid || !briefingRadarSummary) return;
+  const briefings = readSavedBriefings();
+  briefingRadarGrid.innerHTML = "";
+
+  if (!briefings.length) {
+    briefingRadar.hidden = true;
+    return;
+  }
+
+  briefingRadar.hidden = false;
+  const items = state.briefingRadarItems || [];
+  if (state.briefingRadarLoading && !items.length) {
+    briefingRadarSummary.textContent = briefingText("radarLoading");
+    briefingRadarGrid.innerHTML = `<div class="briefing-radar-empty">${briefingText("radarLoading")}</div>`;
+    return;
+  }
+
+  const refreshed = items.filter((item) => !item.error);
+  const changedCount = refreshed.filter((item) => item.newCount > 0).length;
+  const hasError = items.some((item) => item.error);
+
+  if (!items.length) {
+    briefingRadarSummary.textContent = briefingText("radarEmpty");
+    briefingRadarGrid.innerHTML = `<div class="briefing-radar-empty">${briefingText("radarEmpty")}</div>`;
+    return;
+  }
+
+  if (hasError) {
+    briefingRadarSummary.textContent = briefingText("radarError");
+  } else if (changedCount > 0) {
+    briefingRadarSummary.textContent = briefingText("radarUpdated").replace("{count}", String(changedCount));
+  } else if (refreshed.some((item) => !item.lastVisitedAt)) {
+    briefingRadarSummary.textContent = briefingText("radarReady");
+  } else {
+    briefingRadarSummary.textContent = briefingText("radarCaughtUp");
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    const lead = item.leadStory;
+    const leadMeta = lead
+      ? `${lead.source?.name || "Source"} · ${formatDate(lead.publishedAt)}`
+      : briefingText("radarRefresh").replace("{time}", formatDate(item.updatedAt));
+    card.className = `briefing-radar-card${item.newCount > 0 ? " has-fresh" : ""}${item.error ? " has-error" : ""}`;
+    card.innerHTML = `
+      <div class="briefing-radar-top">
+        <span class="briefing-radar-badge">${escapeHtml(briefingRadarCountText(item))}</span>
+        <small>${escapeHtml(briefingRadarStatusText(item))}</small>
+      </div>
+      <strong>${escapeHtml(briefingLabel(item.briefing))}</strong>
+      <p>${escapeHtml(briefingMeta(item.briefing))}</p>
+      <div class="briefing-radar-story">
+        <span>${item.newCount > 0 ? "Lead update" : "Top story"}</span>
+        <strong>${escapeHtml(lead?.title || "Open this briefing to see the latest source-backed stories.")}</strong>
+        <small>${escapeHtml(leadMeta)}</small>
+      </div>
+      <div class="briefing-radar-actions">
+        <button type="button" class="briefing-radar-open">${escapeHtml(briefingRadarActionText(item))}</button>
+        <button type="button" class="briefing-radar-share">${escapeHtml(briefingText("shareSavedBriefing"))}</button>
+      </div>
+    `;
+    card.querySelector(".briefing-radar-open").addEventListener("click", () => applySavedBriefing(item.briefing));
+    card.querySelector(".briefing-radar-share").addEventListener("click", () => shareBriefing(item.briefing));
+    briefingRadarGrid.appendChild(card);
+  });
+}
+
+async function loadBriefingRadar() {
+  if (!briefingRadar || !briefingRadarGrid) return;
+  const briefings = readSavedBriefings().slice(0, 4);
+  state.briefingRadarRequestId += 1;
+  const requestId = state.briefingRadarRequestId;
+
+  if (!briefings.length) {
+    state.briefingRadarItems = [];
+    state.briefingRadarLoading = false;
+    renderBriefingRadar();
+    return;
+  }
+
+  state.briefingRadarLoading = true;
+  renderBriefingRadar();
+  const snapshots = readBriefingSnapshots();
+
+  const items = await Promise.all(briefings.map(async (briefing) => {
+    const snapshot = snapshots[briefingSnapshotKey(briefingSnapshotDraftFromBriefing(briefing))];
+    try {
+      const payload = await fetchArticlesForBriefing(briefing);
+      const seen = new Set(snapshot?.articleKeys || []);
+      const freshStories = snapshot?.articleKeys?.length
+        ? payload.articles.filter((article) => !seen.has(articleSnapshotKey(article)))
+        : [];
+      return {
+        briefing,
+        newCount: freshStories.slice(0, 6).length,
+        leadStory: freshStories[0] || payload.articles[0] || null,
+        lastVisitedAt: snapshot?.visitedAt || "",
+        updatedAt: payload.updatedAt
+      };
+    } catch {
+      return {
+        briefing,
+        newCount: 0,
+        leadStory: null,
+        lastVisitedAt: snapshot?.visitedAt || "",
+        updatedAt: "",
+        error: true
+      };
+    }
+  }));
+
+  if (requestId !== state.briefingRadarRequestId) return;
+  state.briefingRadarItems = items.sort(compareBriefingRadarItems);
+  state.briefingRadarLoading = false;
+  renderBriefingRadar();
+}
+
 function briefingMeta(briefing) {
   const sortName = currentText().sorts?.[briefing.sort] || briefing.sort || currentText().sorts?.interesting || "Most interesting";
   const bits = [languageNameById(briefing.language || "en"), sortName];
@@ -948,6 +1173,7 @@ function applySavedBriefing(briefing) {
 function removeSavedBriefing(briefingId) {
   writeSavedBriefings(readSavedBriefings().filter((briefing) => briefing.id !== briefingId));
   renderSavedBriefings();
+  loadBriefingRadar();
   showToast(briefingText("briefingRemoved"));
 }
 
@@ -966,6 +1192,7 @@ function saveCurrentBriefing() {
     createdAt: new Date().toISOString()
   }, ...briefings]);
   renderSavedBriefings();
+  loadBriefingRadar();
   showToast(briefingText("briefingSaved"));
 }
 
@@ -2112,6 +2339,10 @@ function applyTranslations() {
   if (savedBriefingsKicker) savedBriefingsKicker.textContent = briefingText("savedBriefingsKicker");
   if (savedBriefingsTitle) savedBriefingsTitle.textContent = briefingText("savedBriefingsTitle");
   if (savedBriefingsSummary) savedBriefingsSummary.textContent = briefingText("savedBriefingsSummary");
+  if (briefingRadar) {
+    const radarTitle = briefingRadar.querySelector("h3");
+    if (radarTitle) radarTitle.textContent = briefingText("radarTitle");
+  }
   if (shareBriefingButton) shareBriefingButton.textContent = briefingText("shareBriefing");
   if (saveBriefingButton) saveBriefingButton.textContent = briefingText("saveBriefing");
   refreshButton.textContent = text.refresh;
@@ -2131,6 +2362,7 @@ function applyTranslations() {
   syncSourcePicker();
   renderCategoryNavigation();
   renderSavedBriefings();
+  renderBriefingRadar();
 
   if (!state.articles.length) {
     updatedLabel.textContent = text.loading;
@@ -3102,6 +3334,7 @@ function renderArticles() {
   renderNewsTimeline(articles);
   renderNewsGame(articles);
   renderSavedBriefings();
+  renderBriefingRadar();
   renderReturningFeed();
   renderMyNews();
   renderSavedStories();
@@ -3185,6 +3418,7 @@ async function loadNews() {
     updateHeading(payload);
     renderArticles();
     saveBriefingSnapshot(payload.articles);
+    loadBriefingRadar();
     if (!state.shortAutoOpened && !shortsClosedThisSession()) {
       openShorts({ auto: true, preferUserCountry: true });
     }
@@ -3430,6 +3664,7 @@ document.querySelector(".newsletter-form")?.addEventListener("submit", (event) =
 
 initTheme();
 renderSavedBriefings();
+renderBriefingRadar();
 renderMyNews();
 renderSavedStories();
 renderContinueReading();
