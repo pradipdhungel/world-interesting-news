@@ -100,6 +100,8 @@ const calendarRefresh = document.querySelector("#calendar-refresh");
 const myNewsSection = document.querySelector("#my-news");
 const myNewsSummary = document.querySelector("#my-news-summary");
 const myNewsPreferences = document.querySelector("#my-news-preferences");
+const myNewsDigest = document.querySelector("#my-news-digest");
+const myNewsDigestGrid = document.querySelector("#my-news-digest-grid");
 const myNewsGrid = document.querySelector("#my-news-grid");
 const followCountryButton = document.querySelector("#follow-country");
 const followCategoryButton = document.querySelector("#follow-category");
@@ -792,6 +794,26 @@ function returningText(key) {
   return fallback[key] || "";
 }
 
+function myNewsText(key) {
+  const fallback = {
+    intro: "Follow the country and topic you are browsing to build a faster personal feed.",
+    summaryMatches: "{count} stories match your saved interests. Open a digest card or tap a chip to adjust it.",
+    summaryWaiting: "Your interests are saved. Matching stories will appear here as the feed refreshes.",
+    emptyStart: "Start by choosing a country or topic above, then My News will collect matching stories here.",
+    emptyWaiting: "No matching stories in this feed yet. Try Refresh or follow another topic.",
+    digestLead: "Lead story",
+    digestOpen: "Open digest",
+    digestShare: "Share digest",
+    digestNoStories: "No live stories in this feed yet",
+    digestCountOne: "1 story in this feed",
+    digestCountMany: "{count} stories in this feed",
+    digestCountry: "Country follow",
+    digestTopic: "Topic follow",
+    digestFallbackMeta: "Open this digest to check the latest stories."
+  };
+  return fallback[key] || "";
+}
+
 function readSavedBriefings() {
   try {
     const items = JSON.parse(localStorage.getItem(SAVED_BRIEFINGS_KEY) || "[]");
@@ -1324,6 +1346,92 @@ function articleMatchesMyNews(article, preferences) {
   return preferences.countries.includes(articleCountry) || preferences.categories.includes(article.category);
 }
 
+function interestMatchesArticle(article, type, value) {
+  if (type === "countries") {
+    return String(article.countryCode || "").toLowerCase() === String(value || "").toLowerCase();
+  }
+  return article.category === value;
+}
+
+function interestBriefing(type, value) {
+  return {
+    country: type === "countries" ? value : "world",
+    category: type === "categories" ? value : "top",
+    language: languageSelect.value || "en",
+    sort: "interesting",
+    source: "all",
+    query: ""
+  };
+}
+
+function interestLabel(type, value) {
+  return type === "countries" ? countryNameById(value) : normalizeCategory(value);
+}
+
+function interestDigestItems(preferences) {
+  const interests = [
+    ...preferences.countries.map((value) => ({ type: "countries", value })),
+    ...preferences.categories.map((value) => ({ type: "categories", value }))
+  ];
+
+  return interests
+    .map((interest) => {
+      const items = sortArticles(state.articles.filter((article) => interestMatchesArticle(article, interest.type, interest.value))).slice(0, 3);
+      return {
+        ...interest,
+        label: interestLabel(interest.type, interest.value),
+        kind: interest.type === "countries" ? myNewsText("digestCountry") : myNewsText("digestTopic"),
+        briefing: interestBriefing(interest.type, interest.value),
+        items
+      };
+    })
+    .sort((a, b) => {
+      const itemGap = b.items.length - a.items.length;
+      if (itemGap) return itemGap;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+function renderMyNewsDigest(preferences) {
+  if (!myNewsDigest || !myNewsDigestGrid) return;
+  const hasPreferences = preferences.countries.length || preferences.categories.length;
+  myNewsDigest.hidden = !hasPreferences;
+  myNewsDigestGrid.innerHTML = "";
+
+  if (!hasPreferences) return;
+
+  interestDigestItems(preferences).forEach((interest) => {
+    const lead = interest.items[0];
+    const countLabel = interest.items.length === 1
+      ? myNewsText("digestCountOne")
+      : interest.items.length > 1
+        ? myNewsText("digestCountMany").replace("{count}", String(interest.items.length))
+        : myNewsText("digestNoStories");
+
+    const card = document.createElement("article");
+    card.className = "my-news-digest-card";
+    card.innerHTML = `
+      <div class="my-news-digest-top">
+        <span>${escapeHtml(interest.kind)}</span>
+        <small>${escapeHtml(countLabel)}</small>
+      </div>
+      <strong>${escapeHtml(interest.label)}</strong>
+      <div class="my-news-digest-story">
+        <span>${escapeHtml(myNewsText("digestLead"))}</span>
+        <strong>${escapeHtml(lead?.title || myNewsText("digestNoStories"))}</strong>
+        <small>${escapeHtml(lead ? `${lead.source?.name || "Source"} Â· ${formatDate(lead.publishedAt)}` : myNewsText("digestFallbackMeta"))}</small>
+      </div>
+      <div class="my-news-digest-actions">
+        <button type="button" class="my-news-digest-open">${escapeHtml(myNewsText("digestOpen"))}</button>
+        <button type="button" class="my-news-digest-share">${escapeHtml(myNewsText("digestShare"))}</button>
+      </div>
+    `;
+    card.querySelector(".my-news-digest-open").addEventListener("click", () => applySavedBriefing(interest.briefing));
+    card.querySelector(".my-news-digest-share").addEventListener("click", () => shareBriefing(interest.briefing));
+    myNewsDigestGrid.appendChild(card);
+  });
+}
+
 function renderPreferenceChip(type, value) {
   const button = document.createElement("button");
   button.type = "button";
@@ -1343,9 +1451,11 @@ function renderMyNews() {
     : [];
 
   myNewsPreferences.innerHTML = "";
+  if (myNewsDigestGrid) myNewsDigestGrid.innerHTML = "";
   myNewsGrid.innerHTML = "";
   [...preferences.countries.map((value) => ["countries", value]), ...preferences.categories.map((value) => ["categories", value])]
     .forEach(([type, value]) => myNewsPreferences.appendChild(renderPreferenceChip(type, value)));
+  renderMyNewsDigest(preferences);
 
   const country = currentCountry();
   if (followCountryButton) {
@@ -1363,18 +1473,19 @@ function renderMyNews() {
   if (myNewsSummary) {
     myNewsSummary.textContent = hasPreferences
       ? matches.length
-        ? `${matches.length} stories match your saved interests. Tap a chip to remove it.`
-        : "Your interests are saved. Matching stories will appear as the feed refreshes."
-      : "Follow the country and topic you are browsing to build a faster personal feed.";
+        ? myNewsText("summaryMatches").replace("{count}", String(matches.length))
+        : myNewsText("summaryWaiting")
+      : myNewsText("intro");
   }
 
   if (!hasPreferences) {
-    myNewsGrid.innerHTML = `<div class="my-news-empty">Start by choosing a country or topic above, then My News will collect matching stories here.</div>`;
+    if (myNewsDigest) myNewsDigest.hidden = true;
+    myNewsGrid.innerHTML = `<div class="my-news-empty">${myNewsText("emptyStart")}</div>`;
     return;
   }
 
   if (!matches.length) {
-    myNewsGrid.innerHTML = `<div class="my-news-empty">No matching stories in this feed yet. Try Refresh or follow another topic.</div>`;
+    myNewsGrid.innerHTML = `<div class="my-news-empty">${myNewsText("emptyWaiting")}</div>`;
     return;
   }
 

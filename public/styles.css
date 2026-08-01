@@ -3857,6 +3857,105 @@ h1 {
   margin: 18px 0;
 }
 
+.my-news-digest[hidden] {
+  display: none;
+}
+
+.my-news-digest {
+  margin-bottom: 18px;
+}
+
+.my-news-digest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.my-news-digest-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--gold) 10%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-raised) 92%, transparent), var(--surface));
+  box-shadow: var(--soft-shadow);
+}
+
+.my-news-digest-top,
+.my-news-digest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.my-news-digest-top span,
+.my-news-digest-story span {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.my-news-digest-top small,
+.my-news-digest-story small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.my-news-digest-card > strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.my-news-digest-story {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--soft) 58%, var(--surface));
+}
+
+.my-news-digest-story strong {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.my-news-digest-open,
+.my-news-digest-share {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.my-news-digest-open {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.my-news-digest-open:hover {
+  background: var(--accent-strong);
+}
+
+.my-news-digest-share {
+  border: 1px solid color-mix(in srgb, var(--teal) 38%, var(--line));
+  background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+  color: var(--teal);
+}
+
+.my-news-digest-share:hover {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 18%, var(--surface));
+}
+
 .my-news-chip::after {
   content: " x";
   color: var(--muted);
@@ -5454,6 +5553,7 @@ h1 {
   .briefing-radar-grid,
   .my-news-grid,
   .saved-briefings-grid,
+  .my-news-digest-grid,
   .returning-feed-grid,
   .source-snapshot-grid,
   .saved-grid,
