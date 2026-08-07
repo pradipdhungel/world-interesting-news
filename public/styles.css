@@ -3850,6 +3850,20 @@ h1 {
   background: color-mix(in srgb, var(--accent) 15%, var(--surface));
 }
 
+.my-news-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 18px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--teal) 28%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .my-news-preferences {
   display: flex;
   flex-wrap: wrap;
@@ -3924,6 +3938,39 @@ h1 {
 .my-news-digest-story strong {
   font-size: 15px;
   line-height: 1.4;
+}
+
+.my-news-digest-list {
+  display: grid;
+  gap: 8px;
+}
+
+.my-news-digest-list a {
+  display: grid;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.my-news-digest-list a strong {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.my-news-digest-list a span {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.my-news-digest-list > small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .my-news-digest-open,
@@ -5567,6 +5614,10 @@ h1 {
 
   .my-news-actions {
     justify-content: flex-start;
+  }
+
+  .my-news-status {
+    width: fit-content;
   }
 
   .secondary-card {

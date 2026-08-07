@@ -99,12 +99,15 @@ const calendarGrid = document.querySelector("#calendar-grid");
 const calendarRefresh = document.querySelector("#calendar-refresh");
 const myNewsSection = document.querySelector("#my-news");
 const myNewsSummary = document.querySelector("#my-news-summary");
+const myNewsStatus = document.querySelector("#my-news-status");
 const myNewsPreferences = document.querySelector("#my-news-preferences");
 const myNewsDigest = document.querySelector("#my-news-digest");
 const myNewsDigestGrid = document.querySelector("#my-news-digest-grid");
 const myNewsGrid = document.querySelector("#my-news-grid");
+const followBriefingButton = document.querySelector("#follow-briefing");
 const followCountryButton = document.querySelector("#follow-country");
 const followCategoryButton = document.querySelector("#follow-category");
+const clearMyNewsButton = document.querySelector("#clear-my-news");
 const savedStoriesSection = document.querySelector("#saved-stories");
 const savedStoriesGrid = document.querySelector("#saved-grid");
 const savedStoriesSummary = document.querySelector("#saved-summary");
@@ -801,6 +804,14 @@ function myNewsText(key) {
     summaryWaiting: "Your interests are saved. Matching stories will appear here as the feed refreshes.",
     emptyStart: "Start by choosing a country or topic above, then My News will collect matching stories here.",
     emptyWaiting: "No matching stories in this feed yet. Try Refresh or follow another topic.",
+    statusEmpty: "No follows yet",
+    statusOne: "1 follow saved",
+    statusMany: "{count} follows saved",
+    followBriefing: "Follow this briefing",
+    followingBriefing: "Following this briefing",
+    clearFollows: "Clear follows",
+    followsCleared: "My News follows cleared",
+    digestMore: "{count} more stories",
     digestLead: "Lead story",
     digestOpen: "Open digest",
     digestShare: "Share digest",
@@ -1337,6 +1348,38 @@ function toggleMyNewsPreference(type, value) {
   renderMyNews();
 }
 
+function followCurrentBriefing() {
+  const countryId = currentCountry()?.id;
+  const categoryId = categorySelect.value || "top";
+  const preferences = readMyNewsPreferences();
+  let changed = false;
+
+  if (countryId && countryId !== "world" && !preferences.countries.includes(countryId)) {
+    preferences.countries = [...preferences.countries, countryId];
+    changed = true;
+  }
+
+  if (categoryId && !preferences.categories.includes(categoryId)) {
+    preferences.categories = [...preferences.categories, categoryId];
+    changed = true;
+  }
+
+  if (!changed) {
+    showToast(myNewsText("followingBriefing"));
+    return;
+  }
+
+  writeMyNewsPreferences(preferences);
+  renderMyNews();
+  showToast(myNewsText("followingBriefing"));
+}
+
+function clearMyNewsPreferences() {
+  writeMyNewsPreferences({ countries: [], categories: [] });
+  renderMyNews();
+  showToast(myNewsText("followsCleared"));
+}
+
 function countryNameById(countryId) {
   return state.countries.find((country) => country.id === countryId)?.name || countryId;
 }
@@ -1421,6 +1464,17 @@ function renderMyNewsDigest(preferences) {
         <strong>${escapeHtml(lead?.title || myNewsText("digestNoStories"))}</strong>
         <small>${escapeHtml(lead ? `${lead.source?.name || "Source"} Â· ${formatDate(lead.publishedAt)}` : myNewsText("digestFallbackMeta"))}</small>
       </div>
+      ${interest.items.length > 1 ? `
+        <div class="my-news-digest-list">
+          ${interest.items.slice(1).map((item) => `
+            <a href="${escapeHtml(articleLink(item))}">
+              <strong>${escapeHtml(item.source?.name || "Source")}</strong>
+              <span>${escapeHtml(item.title)}</span>
+            </a>
+          `).join("")}
+          ${interest.items.length > 3 ? `<small>${escapeHtml(myNewsText("digestMore").replace("{count}", String(interest.items.length - 3)))}</small>` : ""}
+        </div>
+      ` : ""}
       <div class="my-news-digest-actions">
         <button type="button" class="my-news-digest-open">${escapeHtml(myNewsText("digestOpen"))}</button>
         <button type="button" class="my-news-digest-share">${escapeHtml(myNewsText("digestShare"))}</button>
@@ -1449,7 +1503,15 @@ function renderMyNews() {
   const matches = hasPreferences
     ? sortArticles(state.articles.filter((article) => articleMatchesMyNews(article, preferences))).slice(0, 6)
     : [];
+  const followCount = preferences.countries.length + preferences.categories.length;
 
+  if (myNewsStatus) {
+    myNewsStatus.textContent = !followCount
+      ? myNewsText("statusEmpty")
+      : followCount === 1
+        ? myNewsText("statusOne")
+        : myNewsText("statusMany").replace("{count}", String(followCount));
+  }
   myNewsPreferences.innerHTML = "";
   if (myNewsDigestGrid) myNewsDigestGrid.innerHTML = "";
   myNewsGrid.innerHTML = "";
@@ -1468,6 +1530,17 @@ function renderMyNews() {
     const category = categorySelect.value || "top";
     const followed = preferences.categories.includes(category);
     followCategoryButton.textContent = followed ? `Following ${normalizeCategory(category)}` : `Follow ${normalizeCategory(category)}`;
+  }
+  if (followBriefingButton) {
+    const countryId = country?.id || "world";
+    const category = categorySelect.value || "top";
+    const hasCountry = countryId !== "world" && preferences.countries.includes(countryId);
+    const hasCategory = preferences.categories.includes(category);
+    followBriefingButton.textContent = hasCountry && hasCategory ? myNewsText("followingBriefing") : myNewsText("followBriefing");
+  }
+  if (clearMyNewsButton) {
+    clearMyNewsButton.textContent = myNewsText("clearFollows");
+    clearMyNewsButton.disabled = !hasPreferences;
   }
 
   if (myNewsSummary) {
@@ -3720,6 +3793,8 @@ followCountryButton?.addEventListener("click", () => {
 followCategoryButton?.addEventListener("click", () => {
   toggleMyNewsPreference("categories", categorySelect.value || "top");
 });
+followBriefingButton?.addEventListener("click", followCurrentBriefing);
+clearMyNewsButton?.addEventListener("click", clearMyNewsPreferences);
 savedStoriesClear?.addEventListener("click", () => {
   writeSavedStories([]);
   renderSavedStories();
