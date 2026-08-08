@@ -182,6 +182,7 @@ const RECENT_STORIES_KEY = "worldNewsRecentStories";
 const MAX_RECENT_STORIES = 6;
 const BRIEFING_SNAPSHOTS_KEY = "worldNewsBriefingSnapshots";
 const MAX_BRIEFING_SNAPSHOTS = 12;
+const LAST_BRIEFING_CONTEXT_KEY = "worldNewsLastBriefingContext";
 
 const translations = {
   en: {
@@ -420,9 +421,28 @@ function readingTime(article) {
   return `${Math.max(2, Math.ceil(words / 85))} min read`;
 }
 
-function articleLink(article) {
+function persistBriefingContext(briefing = currentBriefingDraft()) {
+  try {
+    localStorage.setItem(LAST_BRIEFING_CONTEXT_KEY, JSON.stringify({
+      ...briefing,
+      savedAt: new Date().toISOString()
+    }));
+  } catch {}
+}
+
+function articleLink(article, briefing = currentBriefingDraft()) {
   const slug = window.NewsSeo ? NewsSeo.slugify(article.title) : article.id;
-  return `/article.html?id=${encodeURIComponent(article.id)}&slug=${encodeURIComponent(slug)}`;
+  const params = new URLSearchParams({
+    id: article.id,
+    slug
+  });
+  if (briefing.country && briefing.country !== "world") params.set("country", briefing.country);
+  if (briefing.category && briefing.category !== "top") params.set("category", briefing.category);
+  if (briefing.language && briefing.language !== "en") params.set("language", briefing.language);
+  if (briefing.sort && briefing.sort !== "interesting") params.set("sort", briefing.sort);
+  if (briefing.source && briefing.source !== "all") params.set("source", briefing.source);
+  if (briefing.query) params.set("q", briefing.query);
+  return `/article.html?${params.toString()}`;
 }
 
 function absoluteArticleUrl(article) {
@@ -573,6 +593,7 @@ function selectCategory(categoryId) {
 
 function updateUrlState() {
   const nextUrl = briefingUrl();
+  persistBriefingContext();
   window.history.replaceState({}, "", nextUrl);
 }
 

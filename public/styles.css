@@ -4934,6 +4934,57 @@ h1 {
   text-decoration: none;
 }
 
+.reader-briefing-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--teal) 26%, var(--line));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--teal) 16%, transparent), transparent 36%),
+    linear-gradient(135deg, color-mix(in srgb, var(--blue) 8%, transparent), transparent 72%),
+    var(--surface-raised);
+}
+
+.reader-briefing-copy {
+  min-width: 0;
+}
+
+.reader-briefing-copy .section-kicker {
+  margin-bottom: 10px;
+}
+
+.reader-briefing-copy h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(26px, 3.2vw, 36px);
+  line-height: 1.08;
+}
+
+.reader-briefing-copy p,
+.reader-briefing-copy small {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.reader-briefing-copy small {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.reader-briefing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .ai-modal {
   position: fixed;
   inset: 0;
@@ -5429,7 +5480,8 @@ h1 {
   .smart-briefing-header,
   .coverage-watch-header,
   .news-timeline-header,
-  .news-game-header {
+  .news-game-header,
+  .reader-briefing-panel {
     flex-direction: column;
     align-items: stretch;
   }
@@ -5717,6 +5769,10 @@ h1 {
   }
 
   .game-actions button {
+    width: 100%;
+  }
+
+  .reader-briefing-actions .source-button {
     width: 100%;
   }
 
