@@ -4385,6 +4385,59 @@ h1 {
   -webkit-line-clamp: 4;
 }
 
+.story-lens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.story-lens-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--accent));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+button.story-lens-chip {
+  cursor: pointer;
+}
+
+.story-lens-filter {
+  color: var(--accent-strong);
+}
+
+.story-lens-publisher {
+  border-color: color-mix(in srgb, var(--teal) 36%, var(--line));
+  background: color-mix(in srgb, var(--teal) 10%, var(--surface));
+  color: var(--teal);
+}
+
+.story-lens-coverage {
+  border-color: color-mix(in srgb, var(--gold) 48%, var(--line));
+  background: color-mix(in srgb, var(--gold) 12%, var(--surface));
+  color: #9a6200;
+}
+
+.story-lens-translation {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong);
+}
+
+.story-lens-chip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+}
+
 .article-footer {
   display: flex;
   flex-wrap: wrap;
@@ -4443,7 +4496,7 @@ h1 {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
 }
 
-.article-card a {
+.article-card .article-body > a {
   align-self: flex-start;
   margin-top: auto;
   padding-top: 16px;
@@ -4452,7 +4505,7 @@ h1 {
   text-decoration: none;
 }
 
-.article-card a:hover {
+.article-card .article-body > a:hover {
   text-decoration: underline;
 }
 

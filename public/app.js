@@ -30,7 +30,8 @@ const state = {
   gameArticles: [],
   gameIndex: 0,
   gameScore: 0,
-  gameAnswered: false
+  gameAnswered: false,
+  coverageByArticleId: new Map()
 };
 
 const countrySelect = document.querySelector("#country-select");
@@ -2924,6 +2925,48 @@ function coverageClusters(articles) {
     .slice(0, 3);
 }
 
+function buildCoverageByArticleId(articles) {
+  const coverage = new Map();
+  coverageClusters(articles).forEach((cluster) => {
+    const sourceCount = cluster.sources.length;
+    const storyCount = cluster.items.length;
+    cluster.items.forEach((item) => {
+      coverage.set(item.id, {
+        sourceCount,
+        storyCount
+      });
+    });
+  });
+  return coverage;
+}
+
+function sourceLensText(key, replacements = {}) {
+  const fallback = {
+    filterSource: "Filter {source}",
+    publisher: "Publisher site",
+    coverage: "{count}-source coverage",
+    translated: "Translated brief",
+    translatedLabel: "Original headline: {title}",
+    sourceFocus: "Showing {source} in this feed"
+  };
+  const template = fallback[key] || "";
+  return Object.entries(replacements).reduce((value, [token, replacement]) => {
+    return value.replace(`{${token}}`, replacement);
+  }, template);
+}
+
+function setSourceFocus(sourceName) {
+  if (!sourceName) return;
+  const exists = Array.from(sourceSelect.options).some((option) => option.value === sourceName);
+  if (!exists) return;
+  sourceSelect.value = sourceName;
+  state.requestedSource = sourceName;
+  syncSourcePicker();
+  renderArticles();
+  showToast(sourceLensText("sourceFocus", { source: sourceName }));
+  grid?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function generatedImageBackground(article) {
   const [primary, secondary, deep] = categoryPalettes[article.category] || categoryPalettes.top;
   const svg = `
@@ -3046,11 +3089,15 @@ function createArticleCard(article, variant = "") {
   const published = node.querySelector(".published");
   const title = node.querySelector("h2");
   const summary = node.querySelector("p");
+  const lensFilter = node.querySelector(".story-lens-filter");
+  const lensPublisher = node.querySelector(".story-lens-publisher");
+  const lensCoverage = node.querySelector(".story-lens-coverage");
+  const lensTranslation = node.querySelector(".story-lens-translation");
   const reading = node.querySelector(".reading-time");
   const aiButton = node.querySelector(".ai-button");
   const saveButton = node.querySelector(".save-button");
   const shareButton = node.querySelector(".share-button");
-  const link = node.querySelector("a");
+  const link = node.querySelector(".article-body > a");
 
   if (variant) card.classList.add(variant);
 
@@ -3069,6 +3116,43 @@ function createArticleCard(article, variant = "") {
   published.textContent = formatDate(article.publishedAt);
   title.textContent = article.title;
   summary.textContent = article.summary || "Open the original report for more details and context.";
+  if (lensFilter) {
+    const sourceName = article.source?.name || "Unknown source";
+    lensFilter.textContent = sourceName;
+    lensFilter.setAttribute("aria-label", sourceLensText("filterSource", { source: sourceName }));
+    lensFilter.addEventListener("click", () => setSourceFocus(sourceName));
+  }
+  if (lensPublisher) {
+    const publisherUrl = article.source?.url || article.url;
+    const publisherHost = hostnameFromUrl(publisherUrl);
+    if (publisherUrl && publisherHost) {
+      lensPublisher.href = publisherUrl;
+      lensPublisher.textContent = publisherHost;
+      lensPublisher.setAttribute("aria-label", `${sourceLensText("publisher")}: ${publisherHost}`);
+    } else {
+      lensPublisher.hidden = true;
+    }
+  }
+  if (lensCoverage) {
+    const coverage = state.coverageByArticleId.get(article.id);
+    if (coverage?.sourceCount >= 2) {
+      lensCoverage.hidden = false;
+      lensCoverage.textContent = sourceLensText("coverage", { count: String(coverage.sourceCount) });
+      lensCoverage.title = `${coverage.storyCount} stories across ${coverage.sourceCount} publishers in this briefing`;
+    } else {
+      lensCoverage.hidden = true;
+    }
+  }
+  if (lensTranslation) {
+    const originalTitle = article.originalTitle && article.originalTitle !== article.title ? article.originalTitle : "";
+    if (originalTitle) {
+      lensTranslation.hidden = false;
+      lensTranslation.textContent = sourceLensText("translated");
+      lensTranslation.title = sourceLensText("translatedLabel", { title: originalTitle });
+    } else {
+      lensTranslation.hidden = true;
+    }
+  }
   reading.textContent = readingTime(article);
   aiButton.addEventListener("click", () => openAiInsight(article));
   if (saveButton) {
@@ -3529,6 +3613,7 @@ function renderCategorySections(articles) {
 function renderArticles() {
   grid.innerHTML = "";
   const articles = sortArticles(sourceFilteredArticles());
+  state.coverageByArticleId = buildCoverageByArticleId(articles);
   localStorage.setItem("worldNewsArticles", JSON.stringify(state.articles));
   localStorage.setItem("worldNewsVisibleArticles", JSON.stringify(articles));
   feedLabel.textContent = `${articles.length} ${currentText().sourcedStories}`;
