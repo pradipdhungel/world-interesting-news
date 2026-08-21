@@ -32,6 +32,13 @@ const snapshotCoverage = document.querySelector("#snapshot-coverage");
 const snapshotCoverageNote = document.querySelector("#snapshot-coverage-note");
 const snapshotChecklist = document.querySelector("#snapshot-checklist");
 const snapshotHomepage = document.querySelector("#snapshot-homepage");
+const coverageCompass = document.querySelector("#coverage-compass");
+const coverageCompassSummary = document.querySelector("#coverage-compass-summary");
+const coverageCompassStats = document.querySelector("#coverage-compass-stats");
+const coverageCompassKeywords = document.querySelector("#coverage-compass-keywords");
+const coverageCompassList = document.querySelector("#coverage-compass-list");
+const coverageCompassOpen = document.querySelector("#coverage-compass-open");
+const coverageCompassSearch = document.querySelector("#coverage-compass-search");
 const prevArticle = document.querySelector("#prev-article");
 const nextArticle = document.querySelector("#next-article");
 const backToBriefing = document.querySelector("#back-to-briefing");
@@ -206,6 +213,13 @@ function keywordsForArticle(article) {
   return [article.category, article.country, article.source?.name].filter(Boolean);
 }
 
+const COVERAGE_STOP_WORDS = new Set([
+  "about", "after", "again", "amid", "among", "around", "because", "before", "being",
+  "below", "between", "brief", "could", "during", "first", "from", "global", "headline",
+  "latest", "their", "there", "these", "thing", "this", "those", "through", "today",
+  "under", "until", "what", "where", "which", "while", "with", "world", "would"
+]);
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -330,6 +344,7 @@ async function initAds() {
 }
 
 function renderMissing() {
+  if (coverageCompass) coverageCompass.hidden = true;
   renderBriefingReturn();
   title.textContent = "Story not found";
   summary.textContent = "Please return to the news list and open the story again.";
@@ -443,6 +458,99 @@ function sourceChecklist(article, sameSourceStories, relatedCount) {
     checks.push("If this story looks important, compare it with a second trusted outlet before sharing.");
   }
   return checks;
+}
+
+function tokenizeCoverageText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 4 && !COVERAGE_STOP_WORDS.has(token));
+}
+
+function articleCoverageTokens(article) {
+  return new Set(tokenizeCoverageText(`${article.title || ""} ${article.summary || ""}`));
+}
+
+function sharedCoverageTokens(first, second) {
+  const shared = [];
+  first.forEach((token) => {
+    if (second.has(token)) shared.push(token);
+  });
+  return shared;
+}
+
+function coverageMatchReason(baseArticle, candidate, sharedTokens) {
+  if (sharedTokens.length >= 3 && candidate.category === baseArticle.category) {
+    return "Strong headline overlap in the same topic";
+  }
+  if (sharedTokens.length >= 2) {
+    return "Shared reporting angle in nearby coverage";
+  }
+  if (candidate.category === baseArticle.category && candidate.country === baseArticle.country) {
+    return "Same topic and region in this live briefing";
+  }
+  if (candidate.source?.name === baseArticle.source?.name) {
+    return "Follow-up coverage from the same publisher";
+  }
+  return "Related to the same developing story area";
+}
+
+function coverageCompassData(article) {
+  const baseTokens = articleCoverageTokens(article);
+  const matches = articles
+    .filter((item) => item.id !== article.id)
+    .map((item) => {
+      const tokens = articleCoverageTokens(item);
+      const sharedTokens = sharedCoverageTokens(baseTokens, tokens);
+      const sameCategory = item.category === article.category;
+      const sameCountry = item.country === article.country;
+      const sameSource = item.source?.name === article.source?.name;
+      const score = (sharedTokens.length * 4) + (sameCategory ? 2 : 0) + (sameCountry ? 1 : 0) + (sameSource ? 1 : 0);
+      return {
+        article: item,
+        sharedTokens,
+        sameSource,
+        score,
+        reason: coverageMatchReason(article, item, sharedTokens)
+      };
+    })
+    .filter((item) => item.score >= 3)
+    .sort((a, b) => b.score - a.score || new Date(b.article.publishedAt || 0).getTime() - new Date(a.article.publishedAt || 0).getTime())
+    .slice(0, 6);
+
+  const distinctSources = new Set([
+    article.source?.name || "Unknown source",
+    ...matches.map((item) => item.article.source?.name || "Unknown source")
+  ]);
+  const sharedTokenCounts = new Map();
+  matches.forEach((item) => {
+    item.sharedTokens.forEach((token) => {
+      sharedTokenCounts.set(token, (sharedTokenCounts.get(token) || 0) + 1);
+    });
+  });
+  const topKeywords = [...sharedTokenCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 4)
+    .map(([token]) => token);
+  const freshest = [article, ...matches.map((item) => item.article)]
+    .map((item) => item.updatedAt || item.publishedAt)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+  const searchTerms = topKeywords.slice(0, 3).join(" ");
+  const searchBriefing = {
+    ...briefing,
+    query: searchTerms || cleanTitle(article.title).split(/\s+/).slice(0, 4).join(" ")
+  };
+
+  return {
+    matches,
+    distinctSourceCount: distinctSources.size,
+    topKeywords,
+    freshest,
+    searchUrl: briefingUrl(searchBriefing),
+    compareUrl: `${briefingUrl()}#coverage-watch`
+  };
 }
 
 function storeRecentArticle(article) {
@@ -561,6 +669,77 @@ function renderSourceSnapshot(article, related) {
   }
 }
 
+function renderCoverageCompass(article) {
+  if (!coverageCompass || !coverageCompassSummary || !coverageCompassStats || !coverageCompassKeywords || !coverageCompassList) return;
+
+  const compass = coverageCompassData(article);
+  const crossSourceMatches = compass.matches.filter((item) => !item.sameSource);
+  const displayMatches = crossSourceMatches.length ? crossSourceMatches : compass.matches;
+
+  coverageCompassStats.innerHTML = "";
+  coverageCompassKeywords.innerHTML = "";
+  coverageCompassList.innerHTML = "";
+
+  if (coverageCompassOpen) coverageCompassOpen.href = compass.compareUrl;
+  if (coverageCompassSearch) coverageCompassSearch.href = compass.searchUrl;
+
+  if (!displayMatches.length) {
+    coverageCompassSummary.textContent = "This story is still relatively isolated in your current feed. Return to the live briefing and check again as more publishers update.";
+    coverageCompassKeywords.innerHTML = '<span class="coverage-compass-empty">No overlapping coverage signals yet.</span>';
+    coverageCompassList.innerHTML = `
+      <article class="coverage-compass-empty-card">
+        <strong>Why this matters</strong>
+        <p>Single-source stories can still be important, but they deserve a second look before you repost or treat them as settled.</p>
+      </article>
+    `;
+    return;
+  }
+
+  const stats = [
+    { label: "Publishers", value: String(compass.distinctSourceCount) },
+    { label: "Related reports", value: String(displayMatches.length) },
+    { label: "Freshest update", value: compass.freshest ? formatDate(compass.freshest) : "Recent" }
+  ];
+  coverageCompassSummary.textContent = `${displayMatches.length} nearby report${displayMatches.length === 1 ? "" : "s"} from ${compass.distinctSourceCount} publisher${compass.distinctSourceCount === 1 ? "" : "s"} help you compare framing before sharing.`;
+  coverageCompassStats.innerHTML = stats.map((stat) => `
+    <article class="coverage-compass-stat">
+      <strong>${escapeHtml(stat.value)}</strong>
+      <span>${escapeHtml(stat.label)}</span>
+    </article>
+  `).join("");
+
+  if (compass.topKeywords.length) {
+    coverageCompassKeywords.innerHTML = compass.topKeywords
+      .map((token) => `<a href="${escapeHtml(compass.searchUrl)}">${escapeHtml(token)}</a>`)
+      .join("");
+  } else {
+    coverageCompassKeywords.innerHTML = '<span class="coverage-compass-empty">Shared terms will appear here when more related coverage is available.</span>';
+  }
+
+  displayMatches.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "coverage-compass-card";
+    card.innerHTML = `
+      <div class="coverage-compass-card-top">
+        <span>${escapeHtml(item.article.source?.name || "Unknown source")}</span>
+        <small>${escapeHtml(item.reason)}</small>
+      </div>
+      <strong>${escapeHtml(item.article.title)}</strong>
+      <p>${escapeHtml(item.article.summary || "Open the report for the full source-backed update.")}</p>
+      <div class="coverage-compass-card-meta">
+        <span>${escapeHtml(item.article.category || "News")}</span>
+        <span>${escapeHtml(item.article.country || "World")}</span>
+        <span>${escapeHtml(formatDate(item.article.publishedAt))}</span>
+      </div>
+      <div class="coverage-compass-card-actions">
+        <a href="${escapeHtml(articleLink(item.article))}">Read brief</a>
+        <a href="${escapeHtml(item.article.url || "/")}">Open source</a>
+      </div>
+    `;
+    coverageCompassList.appendChild(card);
+  });
+}
+
 function renderArticleNavigation(article) {
   const index = articles.findIndex((item) => item.id === article.id);
   const previous = articles[index - 1];
@@ -634,6 +813,7 @@ function renderArticle() {
   renderRelated(article);
   renderTags(article);
   renderSourceSnapshot(article, related);
+  renderCoverageCompass(article);
   renderArticleNavigation(article);
   updateSeo(article);
 

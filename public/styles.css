@@ -5289,6 +5289,168 @@ button.story-lens-chip {
   margin-top: 16px;
 }
 
+.coverage-compass {
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--blue) 22%, var(--line));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--blue) 10%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--gold) 9%, transparent), transparent 68%),
+    var(--surface-raised);
+}
+
+.coverage-compass-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.coverage-compass-header h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 3.3vw, 36px);
+  line-height: 1.06;
+}
+
+.coverage-compass-header p {
+  max-width: 680px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.coverage-compass-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(96px, 1fr));
+  gap: 10px;
+  min-width: min(320px, 100%);
+}
+
+.coverage-compass-stat,
+.coverage-compass-card,
+.coverage-compass-empty-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+
+.coverage-compass-stat {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  text-align: center;
+}
+
+.coverage-compass-stat strong {
+  color: var(--blue);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.coverage-compass-stat span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.coverage-compass-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.coverage-compass-keywords a,
+.coverage-compass-empty {
+  display: inline-flex;
+  align-items: center;
+  min-height: 33px;
+  padding: 0 11px;
+  border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--blue) 7%, var(--surface));
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.coverage-compass-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.coverage-compass-card,
+.coverage-compass-empty-card {
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.coverage-compass-card-top,
+.coverage-compass-card-meta,
+.coverage-compass-card-actions,
+.coverage-compass-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.coverage-compass-card-top {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.coverage-compass-card-top span,
+.coverage-compass-card-top small,
+.coverage-compass-card-meta span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.coverage-compass-card-top span {
+  color: var(--accent-strong);
+  text-transform: uppercase;
+}
+
+.coverage-compass-card strong,
+.coverage-compass-empty-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.coverage-compass-card p,
+.coverage-compass-empty-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.coverage-compass-card-meta {
+  margin-top: 12px;
+}
+
+.coverage-compass-card-actions,
+.coverage-compass-actions {
+  margin-top: 14px;
+}
+
+.coverage-compass-card-actions a {
+  color: var(--accent-strong);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.coverage-compass-actions {
+  margin-top: 18px;
+}
+
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -5532,6 +5694,7 @@ button.story-lens-chip {
   .my-news-header,
   .smart-briefing-header,
   .coverage-watch-header,
+  .coverage-compass-header,
   .news-timeline-header,
   .news-game-header,
   .reader-briefing-panel {
@@ -5827,6 +5990,11 @@ button.story-lens-chip {
 
   .reader-briefing-actions .source-button {
     width: 100%;
+  }
+
+  .coverage-compass-stats {
+    grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .topbar-inner {
